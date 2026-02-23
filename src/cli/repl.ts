@@ -57,7 +57,7 @@ export async function startREPL(): Promise<void> {
     const modelName = providerConfig?.model ?? defaultProvider;
 
     renderBanner(config, {
-        version: '0.8.8',
+        version: '0.8.9',
         project: projectName,
         skillCount: skillLoader.list().length,
         commandCount: commandLoader.list().length,

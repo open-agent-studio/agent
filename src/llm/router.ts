@@ -39,23 +39,48 @@ export class LLMRouter {
             : this.config.models.routing.fallbackChain;
 
         // Try providers in order
+        const maxRetries = this.config.tools.maxRetries || 2;
+        let lastError: Error | undefined;
+
         for (const providerName of chain) {
             const provider = this.providers.get(providerName);
             if (!provider) continue;
 
-            try {
-                if (await provider.isAvailable()) {
-                    return await provider.chat(request);
+            for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+                try {
+                    if (await provider.isAvailable()) {
+                        return await provider.chat(request);
+                    } else {
+                        break; // Skip to next provider if totally unavailable (e.g., missing API key)
+                    }
+                } catch (err) {
+                    lastError = err as Error;
+                    const errString = lastError.message.toLowerCase();
+
+                    // Identify if retry makes sense (Rate Limit, Timeout, 5xx)
+                    const isRetryable = errString.includes('rate') ||
+                        errString.includes('429') ||
+                        errString.includes('50') ||
+                        errString.includes('limit') ||
+                        errString.includes('timeout') ||
+                        errString.includes('ECONNRESET');
+
+                    if (isRetryable && attempt <= maxRetries) {
+                        const backoffMs = attempt * 2000;
+                        console.warn(`[LLM] ${providerName} rate limited/failed. Retrying in ${backoffMs / 1000}s... (Attempt ${attempt}/${maxRetries})`);
+                        await new Promise((r) => setTimeout(r, backoffMs));
+                        continue;
+                    }
+
+                    // Log error and try next provider if not retryable or out of retries
+                    console.error(`[LLM] Provider ${providerName} failed: ${lastError.message}`);
+                    break;
                 }
-            } catch (err) {
-                // Log error and try next provider
-                console.error(`Provider ${providerName} failed: ${(err as Error).message}`);
             }
         }
 
         throw new Error(
-            `No LLM provider available. Tried: ${chain.join(', ')}. ` +
-            'Configure providers in agent.config.json or set API key environment variables.'
+            `No LLM provider available or all failed.\nLast Error: ${lastError?.message || 'Unknown'}\nTried: ${chain.join(', ')}`
         );
     }
 

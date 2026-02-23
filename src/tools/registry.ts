@@ -102,7 +102,11 @@ export class ToolRegistry {
         }
 
         // Execute with timeout
-        const timeout = tool.timeout ?? ctx.config.tools.timeoutMs;
+        const dataPrefix = parseResult.data as Record<string, unknown>;
+        const timeout = (typeof dataPrefix.timeout === 'number' ? dataPrefix.timeout : undefined)
+            ?? tool.timeout
+            ?? ctx.config.tools.timeoutMs;
+
         const start = Date.now();
 
         try {
