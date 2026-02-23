@@ -91,11 +91,19 @@ export class AzureOpenAIProvider implements LLMProvider {
 
         if (choice.message.tool_calls) {
             for (const tc of choice.message.tool_calls) {
-                toolCalls.push({
+                const callInfo: LLMToolCall = {
                     id: tc.id,
                     name: tc.function.name,
-                    args: JSON.parse(tc.function.arguments),
-                });
+                    args: {},
+                };
+
+                try {
+                    callInfo.args = JSON.parse(tc.function.arguments || '{}');
+                } catch (err) {
+                    console.error(`Failed to parse tool arguments for ${tc.function.name}: ${(err as Error).message}`);
+                }
+
+                toolCalls.push(callInfo);
             }
         }
 
