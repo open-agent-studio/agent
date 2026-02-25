@@ -73,6 +73,11 @@ const PluginsConfigSchema = z.object({
     autoLoad: z.boolean().default(true),
 });
 
+// ─── Script Config ───
+const ScriptConfigSchema = z.object({
+    installPaths: z.array(z.string()).default(['.agent/scripts']),
+});
+
 // ─── Skill Config ───
 const SkillConfigSchema = z.object({
     installPaths: z.array(z.string()).default(['.agent/skills']),
@@ -129,6 +134,7 @@ export const AgentConfigSchema = z.object({
     hooks: HookConfigSchema.default({}),
     plugins: PluginsConfigSchema.default({}),
     cliTools: CLIToolsConfigSchema.default({}),
+    scripts: ScriptConfigSchema.default({}),
     skills: SkillConfigSchema.default({}),
     daemon: DaemonConfigSchema.default({}),
     mcp: McpConfigSchema.default({}),

@@ -30,8 +30,9 @@ Here is our vision for the next major milestones.
 - [x] **Lifecycle Hooks**: Event-driven hook system (`before:tool`, `after:step`, `before:plan`, etc.) allowing custom scripts to intercept and validate agent execution at every stage.
 - [x] **Lightweight Commands**: Reusable goal templates defined as markdown files with YAML frontmatter — no `skill.json` boilerplate needed. Auto-detected by `agent run <command-name>`.
 - [x] **Multi-CLI Orchestration**: First-class tool wrappers for external AI CLIs (`cli.cursor`, `cli.codex`, `cli.gemini`, `cli.claude`) so the agent can delegate specialized coding sub-tasks to the right tool.
-- [x] **Plugin System**: Distributable bundles (`plugin.json`) that package skills, commands, hooks, and tools together. Install with `agent plugins install <path>`.
-- [x] **New CLI Commands**: `agent hooks list|add|events`, `agent commands list`, `agent plugins list|install|remove`.
+- [x] **Plugin System**: Distributable bundles (`plugin.json`) that package skills, commands, hooks, tools, and scripts together. Install with `agent plugins install <path>`.
+- [x] **Scripts System**: Repeatable, scriptable tasks defined via `script.yaml` — direct shell/Node execution without LLM involvement. Support for named arguments, environment variables, interpreter auto-detection, timeouts, and confirmation prompts. Works both standalone (`.agent/scripts/`) and inside plugins.
+- [x] **New CLI Commands**: `agent hooks list|add|events`, `agent commands list`, `agent plugins list|install|remove`, `agent scripts list|run|show`.
 
 ## Phase 6: Interactive CLI Experience ✅
 - [x] **Interactive REPL**: When the user types `agent` with no arguments, launch a conversational session with multi-turn context, slash commands, and inline tool execution.

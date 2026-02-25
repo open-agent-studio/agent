@@ -7,6 +7,7 @@ import { SkillLoader } from '../skills/loader.js';
 import { LLMRouter } from '../llm/router.js';
 import { CommandLoader } from '../commands/loader.js';
 import { HookRegistry } from '../hooks/registry.js';
+import { ScriptLoader } from '../scripts/loader.js';
 import { registerCoreTools } from './commands/init.js';
 import { promptApproval } from './ui/prompt.js';
 import { renderBanner, renderToolCall, renderSummary, renderError } from './ui/render.js';
@@ -37,10 +38,14 @@ export async function startREPL(): Promise<void> {
     const llmRouter = new LLMRouter(config);
     const commandLoader = new CommandLoader();
     const hookRegistry = new HookRegistry();
+    const scriptLoader = new ScriptLoader();
 
     await skillLoader.loadAll();
     await commandLoader.loadProjectCommands(process.cwd());
     await hookRegistry.loadProjectHooks(process.cwd());
+
+    const scriptInstallPaths = config.scripts?.installPaths ?? ['.agent/scripts'];
+    await scriptLoader.loadAll(scriptInstallPaths, process.cwd());
 
     // ─── Detect project name ───
     let projectName: string | undefined;
@@ -57,10 +62,11 @@ export async function startREPL(): Promise<void> {
     const modelName = providerConfig?.model ?? defaultProvider;
 
     renderBanner(config, {
-        version: '0.8.9',
+        version: '0.9.0',
         project: projectName,
         skillCount: skillLoader.list().length,
         commandCount: commandLoader.list().length,
+        scriptCount: scriptLoader.list().length,
         provider: modelName,
     });
 
@@ -85,17 +91,21 @@ ${skillLoader.list().map(s => `- ${s.manifest.name}: ${s.manifest.description}`)
 Available Commands:
 ${commandLoader.list().map(c => `- ${c.name}: ${c.description}`).join('\n')}
 
+Available Scripts (run via cmd.run tool with "agent scripts run <name>"):
+${scriptLoader.list().map(s => `- ${s.manifest.name}: ${s.manifest.description}`).join('\n') || '(none)'}
+
 INSTRUCTIONS:
 1. Use available tools to complete the user's goal step by step.
 2. Be proactive: if the user wants an action (open app, create file, refactor code), DO IT with tools.
-3. Keep responses concise and actionable.
-4. When done, provide a clear summary of what was accomplished.
-5. If the user asks a question that doesn't require tool use, just answer directly.`;
+3. If there is a script that matches the user's request, run it using cmd.run with "agent scripts run <script-name>".
+4. Keep responses concise and actionable.
+5. When done, provide a clear summary of what was accomplished.
+6. If the user asks a question that doesn't require tool use, just answer directly.`;
 
     // ─── Initialize conversation and slash commands ───
     const conversation = new ConversationManager(systemPrompt);
     const slashCommands = new SlashCommandRegistry();
-    const slashCtx = { config, skillLoader, commandLoader, hookRegistry, llmRouter };
+    const slashCtx = { config, skillLoader, commandLoader, hookRegistry, llmRouter, scriptLoader };
     const spinner = new Spinner();
 
     const ctx: ExecutionContext = {

@@ -4,6 +4,7 @@ import type { PluginManifest, LoadedPlugin } from './types.js';
 import type { SkillLoader } from '../skills/loader.js';
 import type { CommandLoader } from '../commands/loader.js';
 import type { HookRegistry } from '../hooks/registry.js';
+import type { ScriptLoader } from '../scripts/loader.js';
 
 /**
  * Plugin Loader — discovers, validates, and loads plugin bundles
@@ -24,13 +25,14 @@ export class PluginLoader {
         projectRoot: string,
         skillLoader: SkillLoader,
         commandLoader: CommandLoader,
-        hookRegistry: HookRegistry
+        hookRegistry: HookRegistry,
+        scriptLoader?: ScriptLoader
     ): Promise<LoadedPlugin[]> {
         this.plugins.clear();
 
         for (const pluginPath of installPaths) {
             const absPath = path.resolve(projectRoot, pluginPath);
-            await this.loadFromDirectory(absPath, skillLoader, commandLoader, hookRegistry);
+            await this.loadFromDirectory(absPath, skillLoader, commandLoader, hookRegistry, scriptLoader);
         }
 
         return Array.from(this.plugins.values());
@@ -43,7 +45,8 @@ export class PluginLoader {
         dirPath: string,
         skillLoader: SkillLoader,
         commandLoader: CommandLoader,
-        hookRegistry: HookRegistry
+        hookRegistry: HookRegistry,
+        scriptLoader?: ScriptLoader
     ): Promise<void> {
         try {
             await access(dirPath);
@@ -56,7 +59,7 @@ export class PluginLoader {
             if (!entry.isDirectory()) continue;
 
             const pluginDir = path.join(dirPath, entry.name);
-            await this.loadPlugin(pluginDir, skillLoader, commandLoader, hookRegistry);
+            await this.loadPlugin(pluginDir, skillLoader, commandLoader, hookRegistry, scriptLoader);
         }
     }
 
@@ -67,7 +70,8 @@ export class PluginLoader {
         pluginDir: string,
         skillLoader: SkillLoader,
         commandLoader: CommandLoader,
-        hookRegistry: HookRegistry
+        hookRegistry: HookRegistry,
+        scriptLoader?: ScriptLoader
     ): Promise<LoadedPlugin | null> {
         // Look for manifest in .agent-plugin/ or root
         let manifestPath = path.join(pluginDir, '.agent-plugin', 'plugin.json');
@@ -95,6 +99,7 @@ export class PluginLoader {
             let skillsCount = 0;
             let commandsCount = 0;
             let hooksCount = 0;
+            let scriptsCount = 0;
 
             // Load skills from plugin
             if (manifest.skills) {
@@ -130,12 +135,21 @@ export class PluginLoader {
                 hooksCount = await hookRegistry.loadFromFile(hooksPath, manifest.name);
             }
 
+            // Load scripts from plugin
+            if (manifest.scripts && scriptLoader) {
+                for (const scriptDir of manifest.scripts) {
+                    const absScriptDir = path.resolve(pluginDir, scriptDir);
+                    scriptsCount += await scriptLoader.loadFromDirectory(absScriptDir, manifest.name);
+                }
+            }
+
             const loaded: LoadedPlugin = {
                 manifest,
                 path: pluginDir,
                 skillsCount,
                 commandsCount,
                 hooksCount,
+                scriptsCount,
             };
 
             this.plugins.set(manifest.name, loaded);

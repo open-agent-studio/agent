@@ -47,6 +47,7 @@ export function createPluginsCommand(): Command {
                 if (plugin.skillsCount > 0) parts.push(`${plugin.skillsCount} skills`);
                 if (plugin.commandsCount > 0) parts.push(`${plugin.commandsCount} commands`);
                 if (plugin.hooksCount > 0) parts.push(`${plugin.hooksCount} hooks`);
+                if (plugin.scriptsCount > 0) parts.push(`${plugin.scriptsCount} scripts`);
 
                 if (parts.length > 0) {
                     console.log(chalk.dim(`    Provides: ${parts.join(', ')}`));

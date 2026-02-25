@@ -7,6 +7,8 @@ import { SkillLoader } from '../../skills/loader.js';
 import { SkillRunner } from '../../skills/runner.js';
 import { LLMRouter } from '../../llm/router.js';
 import { CommandLoader } from '../../commands/loader.js';
+import { ScriptLoader } from '../../scripts/loader.js';
+import { ScriptRunner } from '../../scripts/runner.js';
 import { registerCoreTools } from './init.js';
 import { promptApproval } from '../ui/prompt.js';
 import { progress } from '../ui/progress.js';
@@ -34,10 +36,14 @@ export function createRunCommand(): Command {
             const llmRouter = new LLMRouter(config);
             const skillRunner = new SkillRunner(registry, policy, llmRouter);
             const commandLoader = new CommandLoader();
+            const scriptLoader = new ScriptLoader();
 
 
             await skillLoader.loadAll();
             await commandLoader.loadProjectCommands(process.cwd());
+
+            const scriptInstallPaths = config.scripts?.installPaths ?? ['.agent/scripts'];
+            await scriptLoader.loadAll(scriptInstallPaths, process.cwd());
 
             const { PluginLoader } = await import('../../plugins/loader.js');
             const { HookRegistry } = await import('../../hooks/registry.js');
@@ -45,7 +51,7 @@ export function createRunCommand(): Command {
             const hookRegistry = new HookRegistry();
 
             const installPaths = config.plugins?.installPaths ?? ['.agent/plugins'];
-            await pluginLoader.loadAll(installPaths, process.cwd(), skillLoader, commandLoader, hookRegistry);
+            await pluginLoader.loadAll(installPaths, process.cwd(), skillLoader, commandLoader, hookRegistry, scriptLoader);
 
             const ctx: ExecutionContext = {
                 runId: generateRunId(),
@@ -162,6 +168,25 @@ export function createRunCommand(): Command {
                     progress.error(`Failed: ${(err as Error).message}`);
                     process.exit(1);
                 }
+            } else if (scriptLoader.has(goal) || scriptLoader.has(goal.replace(/^\//, ''))) {
+                // ─── Run a Script (direct execution, no LLM) ───
+                const scriptName = goal.replace(/^\//, '');
+                const script = scriptLoader.get(scriptName)!;
+
+                progress.start(`Running script: ${script.manifest.name}`, 1);
+                progress.step(script.manifest.description);
+
+                const scriptRunner = new ScriptRunner();
+                const result = await scriptRunner.run(script, {}, {
+                    projectRoot: process.cwd(),
+                });
+
+                if (result.success) {
+                    progress.success(`Script completed successfully (${result.durationMs}ms)`);
+                } else {
+                    progress.error(`Script failed with exit code ${result.exitCode}`);
+                    process.exit(result.exitCode);
+                }
             } else {
                 // Run goal via LLM with agentic tool-use loop
                 progress.start(`Running goal: ${goal}`, 1);
@@ -187,11 +212,15 @@ You have access to the following tools: ${toolDefs.map(t => t.name).join(', ')}.
 Available Skills:
 ${skillLoader.list().map(s => `- ${s.manifest.name}: ${s.manifest.description}`).join('\n')}
 
+Available Scripts (run via cmd.run tool with "agent scripts run <name>"):
+${scriptLoader.list().map(s => `- ${s.manifest.name}: ${s.manifest.description}`).join('\n') || '(none)'}
+
 INSTRUCTIONS:
 1. Use available tools to complete the user's goal step by step.
 2. If the user asks for a task covered by a skill (like opening VS Code), you can execute the underlying tool (e.g. cmd.run) to achieve it.
-3. Be proactive: if the user wants an action (open app, create file), DO IT. Do not just explain how.
-4. When done, provide a final summary.`,
+3. If there is a script that matches the user's request, run it using cmd.run with "agent scripts run <script-name>".
+4. Be proactive: if the user wants an action (open app, create file), DO IT. Do not just explain how.
+5. When done, provide a final summary.`,
                         },
                         { role: 'user', content: goal },
                     ];

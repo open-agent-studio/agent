@@ -4,6 +4,7 @@ import type { CommandLoader } from '../commands/loader.js';
 import type { HookRegistry } from '../hooks/registry.js';
 import type { LLMRouter } from '../llm/router.js';
 import type { AgentConfig } from '../config/schema.js';
+import type { ScriptLoader } from '../scripts/loader.js';
 
 export interface SlashCommandContext {
     config: AgentConfig;
@@ -11,6 +12,7 @@ export interface SlashCommandContext {
     commandLoader: CommandLoader;
     hookRegistry: HookRegistry;
     llmRouter: LLMRouter;
+    scriptLoader?: ScriptLoader;
 }
 
 interface SlashCommand {
@@ -151,6 +153,28 @@ export class SlashCommandRegistry {
             execute: async () => {
                 console.log(chalk.dim('\n  👋 Goodbye!\n'));
                 process.exit(0);
+            },
+        });
+
+        this.register({
+            name: 'scripts',
+            description: 'List available scripts',
+            execute: async (_args, ctx) => {
+                if (!ctx.scriptLoader) {
+                    console.log(chalk.dim('\n  Script loader not available.\n'));
+                    return;
+                }
+                const scripts = ctx.scriptLoader.list();
+                if (scripts.length === 0) {
+                    console.log(chalk.dim('\n  No scripts found. Create directories in .agent/scripts/\n'));
+                    return;
+                }
+                console.log(chalk.bold(`\n  📜 Scripts (${scripts.length})\n`));
+                for (const s of scripts) {
+                    const source = chalk.dim(` (${s.source})`);
+                    console.log(`    ${chalk.white(s.manifest.name)}${source} — ${chalk.dim(s.manifest.description)}`);
+                }
+                console.log(chalk.dim(`\n  Run with: ${chalk.white('agent scripts run <name>')}\n`));
             },
         });
     }

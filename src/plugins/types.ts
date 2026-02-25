@@ -31,6 +31,8 @@ export interface PluginManifest {
     hooks?: string;
     /** Relative paths to tool modules */
     tools?: string[];
+    /** Relative paths to script directories */
+    scripts?: string[];
 }
 
 /**
@@ -46,4 +48,6 @@ export interface LoadedPlugin {
     commandsCount: number;
     /** Number of hooks loaded from this plugin */
     hooksCount: number;
+    /** Number of scripts loaded from this plugin */
+    scriptsCount: number;
 }

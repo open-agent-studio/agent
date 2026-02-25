@@ -65,6 +65,9 @@ export const DEFAULT_CONFIG: AgentConfig = {
         installPaths: ['.agent/plugins'],
         autoLoad: true,
     },
+    scripts: {
+        installPaths: ['.agent/scripts'],
+    },
     cliTools: {
         cursor: { binary: 'cursor', available: false },
         codex: { binary: 'codex', available: false },

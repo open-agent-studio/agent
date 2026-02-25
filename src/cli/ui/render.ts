@@ -9,6 +9,7 @@ export function renderBanner(_config: AgentConfig, meta: {
     project?: string;
     skillCount: number;
     commandCount: number;
+    scriptCount?: number;
     provider: string;
 }): void {
     const width = 48;
@@ -32,7 +33,8 @@ export function renderBanner(_config: AgentConfig, meta: {
         console.log(chalk.cyan(pad(chalk.white(projLine), projLine.length)));
     }
 
-    const infoLine = `  Model: ${meta.provider} │ ${meta.skillCount} skills │ ${meta.commandCount} commands`;
+    const scriptsPart = meta.scriptCount ? ` │ ${meta.scriptCount} scripts` : '';
+    const infoLine = `  Model: ${meta.provider} │ ${meta.skillCount} skills │ ${meta.commandCount} commands${scriptsPart}`;
     console.log(chalk.cyan(pad(chalk.dim(infoLine), infoLine.length)));
 
     console.log(chalk.cyan(bottom));

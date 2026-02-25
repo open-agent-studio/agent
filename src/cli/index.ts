@@ -13,6 +13,7 @@ import { createReportCommand } from './commands/report.js';
 import { createHooksCommand } from './commands/hooks.js';
 import { createCommandsCommand } from './commands/commands-cmd.js';
 import { createPluginsCommand } from './commands/plugins.js';
+import { createScriptsCommand } from './commands/scripts-cmd.js';
 
 /**
  * Create the CLI program with all commands
@@ -44,6 +45,7 @@ export function createCLI(): Command {
     program.addCommand(createHooksCommand());
     program.addCommand(createCommandsCommand());
     program.addCommand(createPluginsCommand());
+    program.addCommand(createScriptsCommand());
 
     return program;
 }
