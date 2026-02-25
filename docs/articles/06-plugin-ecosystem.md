@@ -2,7 +2,7 @@
 
 In **Parts 1-5**, we built an agent with a brain, body, memory, and self-healing. But it was a closed system.
 
-In **v0.8.0**, we opened it up. Now anyone can extend the agent with **Plugins**, **Hooks**, and **Commands**—without touching core code.
+In **v0.8.0** and **v0.9.0**, we opened it up. Now anyone can extend the agent with **Plugins**, **Hooks**, **Commands**, and **Scripts**—without touching core code.
 
 ## 🪝 Lifecycle Hooks
 
@@ -145,7 +145,7 @@ Configure availability in `agent.config.json`:
 
 ## 🔌 The Plugin System
 
-A **Plugin** bundles skills, commands, hooks, and tools into a single installable package.
+A **Plugin** bundles skills, commands, scripts, and hooks into a single installable package.
 
 ### Plugin Structure
 
@@ -159,6 +159,10 @@ my-plugin/
 │       └── prompt.md
 ├── commands/
 │   └── audit.md
+├── scripts/
+│   └── scan/
+│       ├── script.yaml
+│       └── run.sh
 └── hooks/
     └── hooks.json
 ```
@@ -172,6 +176,7 @@ my-plugin/
   "description": "Security scanning and compliance",
   "skills": ["skills/"],
   "commands": ["commands/"],
+  "scripts": ["scripts/"],
   "hooks": "hooks/hooks.json"
 }
 ```
@@ -184,7 +189,7 @@ agent plugins list                   # Show installed plugins
 agent plugins remove my-plugin      # Uninstall
 ```
 
-When a plugin is installed, its skills, commands, and hooks are automatically loaded on every `agent` run.
+When a plugin is installed, its skills, commands, scripts, and hooks are automatically loaded on every `agent` run.
 
 ---
 

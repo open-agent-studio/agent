@@ -514,6 +514,7 @@ Understand the agent architecture with our 7-part deep-dive:
 5. [**Self-Improvement**](docs/articles/05-self-improvement.md) — Metrics & the Auto-Fixer
 6. [**Plugin Ecosystem**](docs/articles/06-plugin-ecosystem.md) — Hooks, commands, multi-CLI
 7. [**Interactive CLI**](docs/articles/07-interactive-cli.md) — The conversational experience
+8. [**Scripts System**](docs/articles/08-scripts-system.md) — Non-LLM deterministic automation
 
 ### Comparisons
 - [**vs OpenClaw**](docs/comparisons/openclaw.md) — How we differ from AI OS projects
