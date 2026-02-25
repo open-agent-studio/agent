@@ -39,8 +39,9 @@ $ agent
 | **⚡ Autonomous Execution** | Background daemon processes tasks with retries, rollback, and verification |
 | **🛠️ Extensible Skills** | Markdown-based skill definitions—install from a hub or write your own |
 | **⚡ Lightweight Commands** | Quick goal templates as markdown files—no boilerplate needed |
+| **📜 Scripts System** | Repeatable local tasks defined in `script.yaml` for direct execution |
 | **🪝 Lifecycle Hooks** | Intercept execution at 10 event points (before:tool, after:plan, etc.) |
-| **🔌 Plugin System** | Bundle skills, commands, and hooks into distributable packages |
+| **🔌 Plugin System** | Bundle skills, commands, scripts, and hooks into distributable packages |
 | **🔧 Multi-CLI Orchestration** | Delegate tasks to Cursor, Codex, Gemini, or Claude CLIs |
 | **💾 Persistent Memory** | SQLite + FTS5 semantic memory across sessions |
 | **❤️ Self-Improvement** | Monitors skill metrics and auto-patches failing skills |
@@ -110,6 +111,7 @@ The agent **remembers context** across turns—no need to repeat yourself.
 | `/help` | Show all available commands |
 | `/skills` | List installed skills with status |
 | `/commands` | List available lightweight commands |
+| `/scripts` | List available local scripts |
 | `/hooks` | Show registered lifecycle hooks |
 | `/model` | Display current model and provider info |
 | `/compact` | Summarize conversation and free context |
@@ -196,7 +198,45 @@ agent commands list          # See all available commands
 
 ---
 
-### 5. Lifecycle Hooks
+### 5. Scripts
+
+Scripts are repeatable, scriptable tasks (shell/Node Python) defined via a `script.yaml` manifest. They differ from Skills and Commands because they execute directly without LLM involvement, making them perfect for CI/CD tasks, builds, or deployments.
+
+Create `.agent/scripts/deploy/script.yaml`:
+
+```yaml
+name: deploy-staging
+description: Build and deploy current branch to staging
+entrypoint: deploy.sh
+confirm: true
+args:
+  branch:
+    description: Branch to deploy
+    default: main
+```
+
+Create exactly the script you need (`deploy.sh` or `deploy.ts`):
+
+```bash
+#!/bin/bash
+echo "Deploying branch ${SCRIPT_ARG_BRANCH:-main}..."
+npm run build && git push origin HEAD:staging
+```
+
+Now execute it directly from the CLI or REPL:
+
+```bash
+agent scripts run deploy-staging --branch develop
+# or interactively
+> /scripts
+> agent scripts run deploy-staging
+```
+
+Scripts are automatically provided as context to the LLM, so if you ask the agent to "deploy to staging", it knows it can use your exact shell script to do it.
+
+---
+
+### 6. Lifecycle Hooks
 
 Hooks intercept agent execution at every point. Define them in `.agent/hooks/hooks.json`:
 
@@ -264,6 +304,7 @@ my-plugin/
   "description": "Security scanning and compliance",
   "skills": ["skills/"],
   "commands": ["commands/"],
+  "scripts": ["scripts/"],
   "hooks": "hooks/hooks.json"
 }
 ```
@@ -380,6 +421,14 @@ agent memory add "Staging server is at 10.0.0.5" --category fact
 |---------|-------------|
 | `agent commands list` | List available commands |
 
+### Scripts
+
+| Command | Description |
+|---------|-------------|
+| `agent scripts list` | List available scripts |
+| `agent scripts run <name>` | Execute a script directly |
+| `agent scripts show <name>` | Show script arguments and details |
+
 ### Hooks
 
 | Command | Description |
@@ -445,8 +494,9 @@ agent memory add "Staging server is at 10.0.0.5" --category fact
 - **LLM Router**: Multi-provider with offline-first support and fallback chains
 - **Skills**: Markdown prompt-based capabilities
 - **Commands**: Lightweight goal templates (YAML frontmatter + prompt)
+- **Scripts**: Direct executable automation with argument injection
 - **Hooks**: Event-driven lifecycle interception
-- **Plugins**: Distributable bundles of skills + commands + hooks
+- **Plugins**: Distributable bundles of skills + commands + scripts + hooks
 - **Tool Registry**: Sandboxed tool execution with permission gates
 - **Policy Engine**: Human-in-the-loop approval for sensitive operations
 - **Multi-CLI Tools**: Cursor, Codex, Gemini, Claude wrappers
