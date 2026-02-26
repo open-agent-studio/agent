@@ -6,6 +6,7 @@ import { MemoryStore } from '../memory/store.js';
 import { GoalStore, type Task } from '../goals/store.js';
 import { loadTriggers, type TriggerConfig } from './triggers.js';
 import { getAgentDir } from '../utils/paths.js';
+import { InstanceRegistry } from '../instance/registry.js';
 
 /**
  * Daemon Service — The autonomous agent heartbeat
@@ -25,6 +26,8 @@ export class DaemonService {
     private logPath: string;
     private running = false;
     private startedAt: Date | null = null;
+    private instanceRegistry: InstanceRegistry;
+    private instanceId: string;
     private stats = {
         tasksProcessed: 0,
         tasksCompleted: 0,
@@ -37,6 +40,8 @@ export class DaemonService {
         this.memoryStore = MemoryStore.open(workDir);
         this.goalStore = new GoalStore(this.memoryStore);
         this.logPath = path.join(getAgentDir(), 'daemon.log');
+        this.instanceRegistry = new InstanceRegistry();
+        this.instanceId = `daemon-${Date.now()}`;
     }
 
     /**
@@ -46,6 +51,16 @@ export class DaemonService {
         if (this.running) return;
         this.running = true;
         this.startedAt = new Date();
+
+        // Register the daemon
+        await this.instanceRegistry.register({
+            id: this.instanceId,
+            pid: process.pid,
+            cwd: this.workDir,
+            port: 0,
+            status: 'running',
+            project: path.basename(this.workDir)
+        });
 
         await this.log('🟢 Agent daemon started');
         await this.log(`   Working directory: ${this.workDir}`);
@@ -59,7 +74,10 @@ export class DaemonService {
         }
 
         // Start heartbeat (every 60 seconds)
-        this.heartbeatTimer = setInterval(() => this.heartbeat(), 60_000);
+        this.heartbeatTimer = setInterval(() => {
+            this.heartbeat();
+            this.instanceRegistry.heartbeat(this.instanceId, 'running').catch(() => { });
+        }, 60_000);
 
         // Run initial goal check
         await this.processGoalQueue();
@@ -262,6 +280,8 @@ export class DaemonService {
             `${this.stats.tasksFailed} failed`
         );
         await this.log('   Goodbye.\n');
+
+        await this.instanceRegistry.unregister(this.instanceId).catch(() => { });
 
         process.exit(0);
     }

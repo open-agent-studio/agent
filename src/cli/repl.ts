@@ -16,6 +16,7 @@ import { ConversationManager } from './conversation.js';
 import { SlashCommandRegistry } from './slash-commands.js';
 import { zodToJsonSchema } from '../utils/schema.js';
 import { generateRunId } from '../utils/paths.js';
+import { InstanceRegistry } from '../instance/registry.js';
 import type { ExecutionContext } from '../tools/types.js';
 
 /**
@@ -55,6 +56,18 @@ export async function startREPL(): Promise<void> {
         );
         projectName = pkg.name;
     } catch { /* not a node project */ }
+
+    // ─── Register with Global InstanceRegistry ───
+    const instanceRegistry = new InstanceRegistry();
+    const instanceId = `repl-${Date.now()}`;
+    await instanceRegistry.register({
+        id: instanceId,
+        pid: process.pid,
+        cwd: process.cwd(),
+        port: 0,
+        status: 'idle',
+        project: projectName
+    });
 
     // ─── Show welcome banner ───
     const defaultProvider = config.models.routing.defaultProvider;
@@ -195,8 +208,15 @@ INSTRUCTIONS:
         }
     });
 
-    rl.on('close', () => {
+    rl.on('close', async () => {
         console.log(chalk.dim('\n  👋 Goodbye!\n'));
+        await instanceRegistry.unregister(instanceId);
+        process.exit(0);
+    });
+
+    // Handle abrupt exits
+    process.on('SIGINT', async () => {
+        await instanceRegistry.unregister(instanceId);
         process.exit(0);
     });
 }
