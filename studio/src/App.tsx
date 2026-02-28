@@ -1,15 +1,29 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import {
-  Terminal, Activity, Workflow, Server
+  Terminal, Activity, Workflow, Server, ArrowLeft, Zap, Blocks, Bot
 } from 'lucide-react';
+import { Terminal as TerminalComponent } from './components/Terminal';
+import { Capabilities } from './components/Capabilities';
 
 export default function App() {
+  return (
+    <div className="min-h-screen bg-neutral-950 text-neutral-200 flex flex-col font-sans">
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/instance/:id/*" element={<InstanceView />} />
+      </Routes>
+    </div>
+  );
+}
+
+function Dashboard() {
   const [instances, setInstances] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchInstances();
-    // Poll every 5s
     const interval = setInterval(fetchInstances, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -27,8 +41,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-200 flex flex-col font-sans">
-
+    <>
       {/* Top Navbar */}
       <header className="h-14 border-b border-white/10 flex items-center px-6 shrink-0 bg-neutral-900/50 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -55,9 +68,6 @@ export default function App() {
             <h2 className="text-2xl font-semibold mb-1">Local Instances</h2>
             <p className="text-neutral-500 text-sm">Monitor and control your active autonomous agent environments.</p>
           </div>
-          <button className="bg-white text-black px-4 py-2 rounded-md font-medium text-sm hover:bg-neutral-200 transition-colors shadow-sm">
-            Spawn New Agent
-          </button>
         </div>
 
         {loading ? (
@@ -74,58 +84,103 @@ export default function App() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {instances.map((instance) => (
-              <InstanceCard key={instance.id} instance={instance} />
-            ))}
+            {instances.map((instance) => {
+              const isDaemon = instance.id.startsWith('daemon');
+              return (
+                <div key={instance.id} className="group border border-white/10 bg-neutral-900/40 rounded-xl p-5 hover:bg-neutral-900/80 hover:border-white/20 transition-all cursor-pointer relative overflow-hidden flex flex-col">
+                  <div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
+
+                  <div className="flex justify-between items-start mb-4 relative z-10">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg border flex-shrink-0 ${isDaemon ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}>
+                        {isDaemon ? <Server size={18} /> : <Terminal size={18} />}
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-neutral-100 leading-tight">
+                          {instance.project || 'Agent Workspace'}
+                        </h3>
+                        <span className="text-xs font-mono text-neutral-500 break-all line-clamp-1 mt-0.5">
+                          PID: {instance.pid}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      Active
+                    </div>
+                  </div>
+
+                  <div className="mt-auto space-y-3 relative z-10">
+                    <div className="flex items-center text-neutral-400 bg-black/20 p-2.5 rounded-md font-mono text-xs overflow-hidden text-ellipsis whitespace-nowrap border border-white/5">
+                      {instance.cwd}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 mt-4">
+                      <button
+                        onClick={() => navigate(`/instance/${instance.id}/console`)}
+                        className="text-xs font-medium py-1.5 border border-white/10 rounded-md bg-white/5 hover:bg-white/10 text-neutral-300 transition-colors"
+                      >
+                        View Console
+                      </button>
+                      <button
+                        onClick={() => navigate(`/instance/${instance.id}/capabilities`)}
+                        className="text-xs font-medium py-1.5 border border-white/10 rounded-md bg-white/5 hover:bg-white/10 text-neutral-300 transition-colors"
+                      >
+                        Capabilities
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </main>
-    </div>
+    </>
   );
 }
 
-function InstanceCard({ instance }: { instance: any }) {
-  const isDaemon = instance.id.startsWith('daemon');
+function InstanceView() {
+  const navigate = useNavigate();
+  // extracting the "action" route from window location for our simple tab navigation
+  const currentTab = window.location.pathname.split('/').pop() || 'console';
 
   return (
-    <div className="group border border-white/10 bg-neutral-900/40 rounded-xl p-5 hover:bg-neutral-900/80 hover:border-white/20 transition-all cursor-pointer relative overflow-hidden flex flex-col">
-      {/* Glass gradient effect */}
-      <div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
-
-      <div className="flex justify-between items-start mb-4 relative z-10">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg border flex-shrink-0 ${isDaemon ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}>
-            {isDaemon ? <Server size={18} /> : <Terminal size={18} />}
-          </div>
-          <div>
-            <h3 className="font-medium text-neutral-100 leading-tight">
-              {instance.project || 'Agent Workspace'}
-            </h3>
-            <span className="text-xs font-mono text-neutral-500 break-all line-clamp-1 mt-0.5">
-              PID: {instance.pid}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
-          <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          Active
-        </div>
-      </div>
-
-      <div className="mt-auto space-y-3 relative z-10">
-        <div className="flex items-center text-neutral-400 bg-black/20 p-2.5 rounded-md font-mono text-xs overflow-hidden text-ellipsis whitespace-nowrap border border-white/5">
-          {instance.cwd}
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 mt-4">
-          <button className="text-xs font-medium py-1.5 border border-white/10 rounded-md bg-white/5 hover:bg-white/10 text-neutral-300 transition-colors">
-            View Console
+    <div className="flex h-screen overflow-hidden">
+      {/* Sidebar for the instance */}
+      <aside className="w-64 border-r border-white/10 bg-neutral-900/50 flex flex-col shrink-0">
+        <div className="p-4 border-b border-white/10 flex items-center gap-2">
+          <button onClick={() => navigate('/')} className="hover:bg-white/10 p-1.5 rounded-md text-neutral-400 hover:text-white transition-colors">
+            <ArrowLeft size={16} />
           </button>
-          <button className="text-xs font-medium py-1.5 border border-white/10 rounded-md bg-white/5 hover:bg-white/10 text-neutral-300 transition-colors">
-            Capabilities
-          </button>
+          <div className="font-medium truncate text-sm">Instance Control</div>
         </div>
+
+        <nav className="p-3 space-y-1 mt-2">
+          <Link to="console" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'console' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
+            <Terminal size={16} /> Console
+          </Link>
+          <Link to="capabilities" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'capabilities' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
+            <Zap size={16} /> Capabilities
+          </Link>
+          <Link to="goals" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'goals' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
+            <Blocks size={16} /> Goals / Workflow
+          </Link>
+          <Link to="memory" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'memory' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
+            <Bot size={16} /> Memory
+          </Link>
+        </nav>
+      </aside>
+
+      {/* Main View Area */}
+      <div className="flex-1 bg-neutral-950 flex flex-col overflow-hidden relative">
+        <Routes>
+          <Route path="console" element={<TerminalComponent />} />
+          <Route path="capabilities" element={<Capabilities />} />
+          <Route path="goals" element={<div className="p-8 text-neutral-500">Goals Interface Coming soon...</div>} />
+          <Route path="memory" element={<div className="p-8 text-neutral-500">Memory Graph Coming soon...</div>} />
+        </Routes>
       </div>
     </div>
   );
