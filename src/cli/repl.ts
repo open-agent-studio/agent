@@ -77,7 +77,7 @@ export async function startREPL(): Promise<void> {
     const modelName = providerConfig?.model ?? defaultProvider;
 
     renderBanner(config, {
-        version: '0.9.7',
+        version: '0.9.8',
         project: projectName,
         skillCount: skillLoader.list().length,
         commandCount: commandLoader.list().length,
@@ -86,7 +86,7 @@ export async function startREPL(): Promise<void> {
     });
 
     // ─── Auto-update check (non-blocking) ───
-    await checkForUpdates('0.9.7');
+    await checkForUpdates('0.9.8');
 
     // ─── Prepare tool definitions for LLM ───
     const allTools = registry.list();
