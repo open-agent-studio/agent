@@ -18,6 +18,37 @@ export class LLMRouter {
         this.initProviders();
     }
 
+    private sanitizeToolName(name: string): string {
+        return name.replace(/\./g, '_');
+    }
+
+    private unsanitizeToolName(name: string): string {
+        return name.replace(/_/g, '.');
+    }
+
+    private async executeWithProvider(provider: LLMProvider, request: LLMRequest): Promise<LLMResponse> {
+        // Many LLMs (like OpenAI) strictly reject dots in tool names via API HTTP validation
+        const sanitizedRequest: LLMRequest = {
+            ...request,
+            tools: request.tools?.map(t => ({
+                ...t,
+                name: this.sanitizeToolName(t.name)
+            }))
+        };
+
+        const response = await provider.chat(sanitizedRequest);
+
+        // Convert the underscore names back to their original dot notation for our registry match logic
+        if (response.toolCalls) {
+            response.toolCalls = response.toolCalls.map(tc => ({
+                ...tc,
+                name: this.unsanitizeToolName(tc.name)
+            }));
+        }
+
+        return response;
+    }
+
     /**
      * Send a chat request to the best available provider
      */
@@ -28,7 +59,7 @@ export class LLMRouter {
             if (override) {
                 const provider = this.providers.get(override);
                 if (provider && await provider.isAvailable()) {
-                    return provider.chat(request);
+                    return this.executeWithProvider(provider, request);
                 }
             }
         }
@@ -49,7 +80,7 @@ export class LLMRouter {
             for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
                 try {
                     if (await provider.isAvailable()) {
-                        return await provider.chat(request);
+                        return await this.executeWithProvider(provider, request);
                     } else {
                         break; // Skip to next provider if totally unavailable (e.g., missing API key)
                     }
