@@ -4,6 +4,7 @@
         "node_modules",
         "dist",
         "tests",
-        "**/*.test.ts"
+        "**/*.test.ts",
+        "studio"
     ]
 }

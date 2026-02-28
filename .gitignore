@@ -13,6 +13,7 @@ npm-debug.log*
 # Testing
 coverage/
 /test
+/test-project
 
 # Editor
 .vscode/

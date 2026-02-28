@@ -3,9 +3,7 @@ import cors from 'cors';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { InstanceRegistry } from '../instance/registry.js';
-import { resolve, join } from 'node:path';
-import { readFile, readdir } from 'node:fs/promises';
-import { getAgentDir } from '../utils/paths.js';
+import { resolve } from 'node:path';
 import { MemoryStore } from '../memory/store.js';
 import { GoalStore } from '../goals/store.js';
 import { ConfigLoader } from '../config/loader.js';
@@ -13,6 +11,7 @@ import { PluginLoader } from '../plugins/loader.js';
 import { SkillLoader } from '../skills/loader.js';
 import { CommandLoader } from '../commands/loader.js';
 import { ScriptLoader } from '../scripts/loader.js';
+import { HookRegistry } from '../hooks/registry.js';
 
 export function createStudioServer() {
     const app = express();
@@ -24,12 +23,14 @@ export function createStudioServer() {
     app.use(express.json());
 
     // --- INSTANCES API ---
-    app.get('/api/instances', async (req, res) => {
+    app.get('/api/instances', async (_req, res) => {
         try {
             const instances = await registry.listActive();
             res.json(instances);
+            return;
         } catch (err) {
             res.status(500).json({ error: (err as Error).message });
+            return;
         }
     });
 
@@ -37,10 +38,12 @@ export function createStudioServer() {
         try {
             const instances = await registry.listActive();
             const inst = instances.find(i => i.id === req.params.id);
-            if (!inst) return res.status(404).json({ error: 'Instance not found' });
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
             res.json(inst);
+            return;
         } catch (err) {
             res.status(500).json({ error: (err as Error).message });
+            return;
         }
     });
 
@@ -49,7 +52,7 @@ export function createStudioServer() {
         try {
             const instances = await registry.listActive();
             const inst = instances.find(i => i.id === req.params.id);
-            if (!inst) return res.status(404).json({ error: 'Instance not found' });
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
 
             const memoryStore = MemoryStore.open(inst.cwd);
             const memories = memoryStore.list(undefined, 100);
@@ -58,8 +61,10 @@ export function createStudioServer() {
                 stats: memoryStore.stats(),
                 memories
             });
+            return;
         } catch (err) {
             res.status(500).json({ error: (err as Error).message });
+            return;
         }
     });
 
@@ -67,7 +72,7 @@ export function createStudioServer() {
         try {
             const instances = await registry.listActive();
             const inst = instances.find(i => i.id === req.params.id);
-            if (!inst) return res.status(404).json({ error: 'Instance not found' });
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
 
             const memoryStore = MemoryStore.open(inst.cwd);
             const goalStore = new GoalStore(memoryStore);
@@ -86,8 +91,10 @@ export function createStudioServer() {
                 stats: goalStore.stats(),
                 goals: goalsWithTasks
             });
+            return;
         } catch (err) {
             res.status(500).json({ error: (err as Error).message });
+            return;
         }
     });
 
@@ -95,22 +102,24 @@ export function createStudioServer() {
         try {
             const instances = await registry.listActive();
             const inst = instances.find(i => i.id === req.params.id);
-            if (!inst) return res.status(404).json({ error: 'Instance not found' });
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
 
             const configLoader = new ConfigLoader();
             const config = await configLoader.load();
 
             const skillLoader = new SkillLoader(config);
             const cmdLoader = new CommandLoader();
-            const pluginLoader = new PluginLoader(config);
+            const pluginLoader = new PluginLoader();
             const scriptLoader = new ScriptLoader();
+            const hookRegistry = new HookRegistry();
 
             // Load all capabilities from the agent's CWD
-            await skillLoader.loadAll(config.skills.installPaths, inst.cwd);
+            await skillLoader.loadAll();
             await cmdLoader.loadProjectCommands(inst.cwd);
             await scriptLoader.loadAll(config.scripts?.installPaths ?? ['.agent/scripts'], inst.cwd);
+            await hookRegistry.loadProjectHooks(inst.cwd);
 
-            const loadedPlugins = await pluginLoader.loadAll(config.plugins.installPaths, inst.cwd);
+            const loadedPlugins = await pluginLoader.loadAll(config.plugins.installPaths, inst.cwd, skillLoader, cmdLoader, hookRegistry, scriptLoader);
 
             res.json({
                 skills: skillLoader.list(),
@@ -118,8 +127,10 @@ export function createStudioServer() {
                 scripts: scriptLoader.list(),
                 plugins: loadedPlugins
             });
+            return;
         } catch (err) {
             res.status(500).json({ error: (err as Error).message });
+            return;
         }
     });
 
@@ -135,7 +146,7 @@ export function createStudioServer() {
     // --- SERVE FRONTEND ---
     const reactAppPath = resolve(process.cwd(), 'studio/dist');
     app.use(express.static(reactAppPath));
-    app.get('*', (req, res) => res.sendFile(resolve(reactAppPath, 'index.html')));
+    app.use((_req, res) => { res.sendFile(resolve(reactAppPath, 'index.html')); });
 
     return server;
 }
