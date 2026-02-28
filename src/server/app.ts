@@ -137,7 +137,39 @@ export function createStudioServer() {
     // --- SOCKET.IO FOR LIVE LOGS ---
     io.on('connection', (socket) => {
         console.log(`[Studio] Client connected: ${socket.id}`);
-        // Here we will eventually stream tail -f from daemon.log or repl stdout
+
+        socket.on('subscribe', (instanceId: string) => {
+            console.log(`[Studio] Client subscribed to ${instanceId}`);
+            socket.join(instanceId);
+        });
+
+        socket.on('agent:command', (data: { instanceId: string, command: string }) => {
+            console.log(`[Studio] Received command for ${data.instanceId}: ${data.command}`);
+
+            // For now, simply mock a system processing response and result 
+            // since we don't have an IPC bridge built into the active CLI instances yet
+            setTimeout(() => {
+                io.to(socket.id).emit('agent:log', {
+                    instanceId: data.instanceId,
+                    text: `[System] Processing command: "${data.command}"...`,
+                    type: 'system'
+                });
+            }, 300);
+
+            setTimeout(() => {
+                let response = `Command executed successfully.`;
+                if (data.command.toLowerCase().includes('hi') || data.command.toLowerCase().includes('hello')) {
+                    response = `Hello! I am connected and receiving your commands.`;
+                }
+
+                io.to(socket.id).emit('agent:log', {
+                    instanceId: data.instanceId,
+                    text: response,
+                    type: 'result'
+                });
+            }, 1200);
+        });
+
         socket.on('disconnect', () => {
             console.log(`[Studio] Client disconnected: ${socket.id}`);
         });
