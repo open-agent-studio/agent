@@ -9,7 +9,7 @@
 $ agent
 
   ╭────────────────────────────────────────────────╮
-  │  🤖 Agent Runtime v0.8.1                       │
+  │  🤖 Agent Runtime v0.9.8                       │
   │    Project: my-app                              │
   │    Model: gpt-4o │ 3 skills │ 2 commands        │
   ╰────────────────────────────────────────────────╯
@@ -391,6 +391,46 @@ agent memory add "Staging server is at 10.0.0.5" --category fact
 
 ---
 
+### 11. Agent Studio
+
+The web-based management console for all agent subsystems:
+
+```bash
+agent studio
+# → Agent Studio running at http://localhost:3333
+```
+
+![Agent Studio Dashboard](docs/studio-screenshot-1.png)
+
+Studio provides:
+- **Dashboard** — View all active agent instances (REPL + daemon)
+- **Console** — Real-time terminal with command relay and approval flow
+- **Goals & Plans** — Create goals, view tasks, track progress
+- **Skills Manager** — CRUD for skill definitions (skill.json + prompt.md)
+- **Commands** — Create/delete lightweight command templates
+- **Scripts** — Create/delete local automation scripts
+- **Plugins** — View and remove installed plugin bundles
+- **Daemon Control** — Start/stop background worker, view logs
+- **Memory Explorer** — Search, add, and browse persistent memories
+
+![Agent Console](docs/studio-screenshot-agent-console-2.png)
+
+---
+
+### 12. Auto-Update
+
+The CLI automatically checks for updates on startup:
+
+```bash
+# Manual update
+agent update
+```
+
+On every launch, the agent fetches the latest npm version, compares semver,
+and installs updates in the background without blocking your session.
+
+---
+
 ## 🤖 Full CLI Reference
 
 ### Core
@@ -402,6 +442,8 @@ agent memory add "Staging server is at 10.0.0.5" --category fact
 | `agent init` | Initialize project configuration |
 | `agent config --init` | Set up global config |
 | `agent doctor` | System health check |
+| `agent update` | Update CLI to latest version |
+| `agent studio` | Launch web-based management console |
 
 ### Skills
 
@@ -505,7 +547,7 @@ agent memory add "Staging server is at 10.0.0.5" --category fact
 
 ## 📚 Learning Series
 
-Understand the agent architecture with our 7-part deep-dive:
+Understand the agent architecture with our 12-part deep-dive:
 
 1. [**Vision & Architecture**](docs/articles/01-vision-architecture.md) — The high-level design
 2. [**The Brain (Planner)**](docs/articles/02-goal-decomposition.md) — Goal decomposition
@@ -515,6 +557,14 @@ Understand the agent architecture with our 7-part deep-dive:
 6. [**Plugin Ecosystem**](docs/articles/06-plugin-ecosystem.md) — Hooks, commands, multi-CLI
 7. [**Interactive CLI**](docs/articles/07-interactive-cli.md) — The conversational experience
 8. [**Scripts System**](docs/articles/08-scripts-system.md) — Non-LLM deterministic automation
+9. [**Agent Studio**](docs/articles/09-agent-studio.md) — Web management console
+10. [**LLM Providers**](docs/articles/10-llm-providers.md) — Provider configuration & routing
+11. [**Policy & Approvals**](docs/articles/11-policy-approvals.md) — Permission-gated execution
+12. [**Daemon & Automation**](docs/articles/12-daemon-automation.md) — Background task processing
+
+### Reference
+- [**REST API Reference**](docs/API.md) — Complete Studio API docs
+- [**Configuration Reference**](docs/CONFIGURATION.md) — All config options
 
 ### Comparisons
 - [**vs OpenClaw**](docs/comparisons/openclaw.md) — How we differ from AI OS projects

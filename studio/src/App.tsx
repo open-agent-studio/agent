@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  Terminal, Activity, Workflow, Server, ArrowLeft, Zap, Blocks, Bot
+  Terminal, Activity, Workflow, Server, ArrowLeft, Zap, Target,
+  Wrench, Code, FileCode, Package, Brain
 } from 'lucide-react';
 import { Terminal as TerminalComponent } from './components/Terminal';
 import { Capabilities } from './components/Capabilities';
+import { GoalsPanel } from './components/GoalsPanel';
+import { SkillsManager } from './components/SkillsManager';
+import { CommandsManager } from './components/CommandsManager';
+import { ScriptsManager } from './components/ScriptsManager';
+import { PluginsManager } from './components/PluginsManager';
+import { DaemonPanel } from './components/DaemonPanel';
+import { MemoryExplorer } from './components/MemoryExplorer';
 
 export default function App() {
   return (
@@ -141,16 +149,27 @@ function Dashboard() {
   );
 }
 
+const sidebarItems = [
+  { icon: Terminal, label: 'Console', path: 'console' },
+  { icon: Zap, label: 'Capabilities', path: 'capabilities' },
+  { icon: Target, label: 'Goals & Plans', path: 'goals' },
+  { icon: Wrench, label: 'Skills', path: 'skills' },
+  { icon: Code, label: 'Commands', path: 'commands' },
+  { icon: FileCode, label: 'Scripts', path: 'scripts' },
+  { icon: Package, label: 'Plugins', path: 'plugins' },
+  { icon: Server, label: 'Daemon', path: 'daemon' },
+  { icon: Brain, label: 'Memory', path: 'memory' },
+];
+
 function InstanceView() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  // extracting the "action" route from window location for our simple tab navigation
   const currentTab = window.location.pathname.split('/').pop() || 'console';
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Sidebar for the instance */}
-      <aside className="w-64 border-r border-white/10 bg-neutral-900/50 flex flex-col shrink-0">
+      {/* Sidebar */}
+      <aside className="w-56 border-r border-white/10 bg-neutral-900/50 flex flex-col shrink-0">
         <div className="p-4 border-b border-white/10 flex items-center gap-2">
           <button onClick={() => navigate('/')} className="hover:bg-white/10 p-1.5 rounded-md text-neutral-400 hover:text-white transition-colors">
             <ArrowLeft size={16} />
@@ -158,19 +177,19 @@ function InstanceView() {
           <div className="font-medium truncate text-sm">Instance Control</div>
         </div>
 
-        <nav className="p-3 space-y-1 mt-2">
-          <Link to={`/instance/${id}/console`} className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'console' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
-            <Terminal size={16} /> Console
-          </Link>
-          <Link to={`/instance/${id}/capabilities`} className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'capabilities' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
-            <Zap size={16} /> Capabilities
-          </Link>
-          <Link to={`/instance/${id}/goals`} className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'goals' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
-            <Blocks size={16} /> Goals / Workflow
-          </Link>
-          <Link to={`/instance/${id}/memory`} className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'memory' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
-            <Bot size={16} /> Memory
-          </Link>
+        <nav className="p-2 space-y-0.5 mt-1 flex-1 overflow-y-auto">
+          {sidebarItems.map(({ icon: Icon, label, path }) => (
+            <Link
+              key={path}
+              to={`/instance/${id}/${path}`}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === path
+                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                  : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
+                }`}
+            >
+              <Icon size={15} /> {label}
+            </Link>
+          ))}
         </nav>
       </aside>
 
@@ -179,8 +198,13 @@ function InstanceView() {
         <Routes>
           <Route path="console" element={<TerminalComponent />} />
           <Route path="capabilities" element={<Capabilities />} />
-          <Route path="goals" element={<div className="p-8 text-neutral-500">Goals Interface Coming soon...</div>} />
-          <Route path="memory" element={<div className="p-8 text-neutral-500">Memory Graph Coming soon...</div>} />
+          <Route path="goals" element={<GoalsPanel />} />
+          <Route path="skills" element={<SkillsManager />} />
+          <Route path="commands" element={<CommandsManager />} />
+          <Route path="scripts" element={<ScriptsManager />} />
+          <Route path="plugins" element={<PluginsManager />} />
+          <Route path="daemon" element={<DaemonPanel />} />
+          <Route path="memory" element={<MemoryExplorer />} />
         </Routes>
       </div>
     </div>
