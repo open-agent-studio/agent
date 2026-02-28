@@ -155,6 +155,16 @@ export function createStudioServer() {
             socket.to(data.instanceId).emit('agent:log', data);
         });
 
+        // Relay approval requests from Agent -> UI
+        socket.on('agent:approval:request', (data: { instanceId: string, action: any }) => {
+            socket.to(data.instanceId).emit('agent:approval:request', data);
+        });
+
+        // Relay approval responses from UI -> Agent
+        socket.on('agent:approval:response', (data: { instanceId: string, tool: string, approved: boolean }) => {
+            socket.to(data.instanceId).emit(`agent:approval:response:${data.tool}`, data);
+        });
+
         socket.on('disconnect', () => {
             console.log(`[Studio] Client disconnected: ${socket.id}`);
         });

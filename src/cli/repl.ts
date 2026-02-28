@@ -76,7 +76,7 @@ export async function startREPL(): Promise<void> {
     const modelName = providerConfig?.model ?? defaultProvider;
 
     renderBanner(config, {
-        version: '0.9.1',
+        version: '0.9.6',
         project: projectName,
         skillCount: skillLoader.list().length,
         commandCount: commandLoader.list().length,
@@ -127,10 +127,12 @@ INSTRUCTIONS:
     socket.on('connect', () => {
         socket.emit('subscribe', instanceId);
     });
+    let activeRemoteCmd = false;
 
     socket.on('agent:command', async (data: { instanceId: string, command: string }) => {
         if (data.instanceId !== instanceId) return;
 
+        activeRemoteCmd = true;
         socket.emit('agent:log', { instanceId, text: `Executing remote command: ${data.command}`, type: 'system' });
         try {
             await executeGoal(undefined, data.command, [], {
@@ -139,6 +141,8 @@ INSTRUCTIONS:
             socket.emit('agent:log', { instanceId, text: `Command completed: ${data.command}`, type: 'result' });
         } catch (e) {
             socket.emit('agent:log', { instanceId, text: `Error: ${(e as Error).message}`, type: 'error' });
+        } finally {
+            activeRemoteCmd = false;
         }
     });
 
@@ -149,7 +153,18 @@ INSTRUCTIONS:
         autonomous: false,
         dryRun: false,
         approvedPermissions: new Set(),
-        onApproval: promptApproval,
+        onApproval: async (action) => {
+            if (activeRemoteCmd) {
+                return new Promise((resolve) => {
+                    socket.emit('agent:approval:request', { instanceId, action });
+                    socket.once(`agent:approval:response:${action.tool}`, (data: { approved: boolean }) => {
+                        resolve(data.approved);
+                    });
+                });
+            } else {
+                return await promptApproval(action);
+            }
+        },
         onProgress: (msg) => {
             if (spinner.isSpinning) spinner.update(msg);
             socket.emit('agent:log', { instanceId, text: msg, type: 'info' });
@@ -178,7 +193,11 @@ INSTRUCTIONS:
 
     rl.prompt();
 
+    let isExecuting = false;
+
     rl.on('line', async (input) => {
+        if (isExecuting) return;
+
         const trimmed = input.trim();
 
         if (!trimmed) {
@@ -187,6 +206,8 @@ INSTRUCTIONS:
         }
 
         try {
+            isExecuting = true;
+            rl.pause();
             // ─── Slash Command? ───
             if (trimmed.startsWith('/')) {
                 const parts = trimmed.slice(1).split(' ');
@@ -196,6 +217,8 @@ INSTRUCTIONS:
                 // Built-in slash command
                 if (slashCommands.has(cmdName)) {
                     await slashCommands.get(cmdName)!.execute(cmdArgs, slashCtx);
+                    isExecuting = false;
+                    rl.resume();
                     rl.prompt();
                     return;
                 }
@@ -207,11 +230,15 @@ INSTRUCTIONS:
                     await executeGoal(command.prompt, `Execute: ${cmdArgs || command.description}`, command.tools, {
                         conversation, llmRouter, registry, policy, toolDefs, ctx, spinner, rl,
                     });
+                    isExecuting = false;
+                    rl.resume();
                     return;
                 }
 
                 console.log(chalk.red(`  Unknown command: /${cmdName}`));
                 console.log(chalk.dim(`  Type /help for available commands.`));
+                isExecuting = false;
+                rl.resume();
                 rl.prompt();
                 return;
             }
@@ -229,6 +256,9 @@ INSTRUCTIONS:
         } catch (err) {
             renderError((err as Error).message);
             rl.prompt();
+        } finally {
+            isExecuting = false;
+            rl.resume();
         }
     });
 

@@ -22,12 +22,44 @@ export class AnthropicProvider implements LLMProvider {
         const systemMessage = request.messages.find((m) => m.role === 'system')?.content ?? '';
         const messages = request.messages
             .filter((m) => m.role !== 'system')
-            .map((m) => ({
-                role: m.role === 'tool' ? ('user' as const) : (m.role as 'user' | 'assistant'),
-                content: m.role === 'tool'
-                    ? `[Tool Result]: ${m.content}`
-                    : m.content,
-            }));
+            .map((m): any => {
+                if (m.role === 'tool') {
+                    return {
+                        role: 'user' as const,
+                        content: [
+                            {
+                                type: 'tool_result',
+                                tool_use_id: m.toolCallId ?? '',
+                                content: m.content
+                            }
+                        ]
+                    };
+                }
+
+                if (m.role === 'assistant' && m.toolCalls && m.toolCalls.length > 0) {
+                    const content: any[] = [];
+                    if (m.content) {
+                        content.push({ type: 'text', text: m.content });
+                    }
+                    for (const tc of m.toolCalls) {
+                        content.push({
+                            type: 'tool_use',
+                            id: tc.id,
+                            name: tc.name,
+                            input: tc.args
+                        });
+                    }
+                    return {
+                        role: 'assistant' as const,
+                        content
+                    };
+                }
+
+                return {
+                    role: m.role as 'user' | 'assistant',
+                    content: m.content,
+                };
+            });
 
         const tools = request.tools?.map((t) => ({
             name: t.name,

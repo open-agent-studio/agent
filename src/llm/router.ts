@@ -33,7 +33,20 @@ export class LLMRouter {
             tools: request.tools?.map(t => ({
                 ...t,
                 name: this.sanitizeToolName(t.name)
-            }))
+            })),
+            messages: request.messages.map(m => {
+                const newM = { ...m };
+                if (newM.name) {
+                    newM.name = this.sanitizeToolName(newM.name);
+                }
+                if (newM.toolCalls) {
+                    newM.toolCalls = newM.toolCalls.map(tc => ({
+                        ...tc,
+                        name: this.sanitizeToolName(tc.name)
+                    }));
+                }
+                return newM;
+            })
         };
 
         const response = await provider.chat(sanitizedRequest);

@@ -36,10 +36,23 @@ export class OpenAIProvider implements LLMProvider {
                     tool_call_id: m.toolCallId ?? '',
                 };
             }
-            return {
+            const msg: any = {
                 role: m.role as 'system' | 'user' | 'assistant',
                 content: m.content,
             };
+
+            if (m.toolCalls && m.toolCalls.length > 0) {
+                msg.tool_calls = m.toolCalls.map((tc) => ({
+                    id: tc.id,
+                    type: 'function',
+                    function: {
+                        name: tc.name,
+                        arguments: JSON.stringify(tc.args),
+                    },
+                }));
+            }
+
+            return msg;
         });
 
         const response = await client.chat.completions.create({

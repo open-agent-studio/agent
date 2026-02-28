@@ -11,6 +11,7 @@ export function Terminal() {
     const [socket, setSocket] = useState<Socket | null>(null);
     const endRef = useRef<HTMLDivElement>(null);
     const [copied, setCopied] = useState<string | null>(null);
+    const [approval, setApproval] = useState<any | null>(null);
 
     useEffect(() => {
         // Initialize Socket.io connection to the local Agent Studio server
@@ -31,6 +32,13 @@ export function Terminal() {
         newSocket.on('agent:log', (data: { instanceId: string, text: string, type: any }) => {
             if (data.instanceId === id || data.instanceId === 'all') {
                 setLogs(prev => [...prev, { id: Math.random().toString(), text: data.text, type: data.type || 'system' }]);
+            }
+        });
+
+        newSocket.on('agent:approval:request', (data: { instanceId: string, action: any }) => {
+            if (data.instanceId === id || data.instanceId === 'all') {
+                setApproval(data.action);
+                setLogs(prev => [...prev, { id: Math.random().toString(), text: `⚠ Action requires approval: ${data.action.description} (${data.action.tool})`, type: 'warn' }]);
             }
         });
 
@@ -60,6 +68,13 @@ export function Terminal() {
         navigator.clipboard.writeText(text);
         setCopied(id);
         setTimeout(() => setCopied(null), 2000);
+    };
+
+    const handleApprovalResponse = (approved: boolean) => {
+        if (!approval || !socket) return;
+        setLogs(prev => [...prev, { id: Math.random().toString(), text: approved ? `✔ Approved Action: ${approval.tool}` : `✖ Denied Action: ${approval.tool}`, type: approved ? 'result' : 'error' }]);
+        socket.emit('agent:approval:response', { instanceId: id, tool: approval.tool, approved });
+        setApproval(null);
     };
 
     return (
@@ -126,8 +141,34 @@ export function Terminal() {
                 <div ref={endRef} />
             </div>
 
-            {/* Input Form */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] max-w-4xl">
+            {/* Input Form & Approval Banner */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] max-w-4xl flex flex-col gap-3">
+                {approval && (
+                    <div className="p-4 border border-amber-500/20 bg-amber-500/10 backdrop-blur-xl shadow-2xl rounded-xl flex items-center justify-between gap-4 w-full">
+                        <div className="flex-1">
+                            <h4 className="text-amber-200 font-medium mb-1 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></div> Approval Required: {approval.tool}</h4>
+                            <p className="text-amber-200/70 text-sm whitespace-pre-wrap">{approval.description}</p>
+                            {approval.riskLevel && (
+                                <div className="mt-2 text-xs font-mono bg-black/20 rounded px-2 py-1 inline-block text-amber-500">Risk: {approval.riskLevel.toUpperCase()}</div>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                onClick={() => handleApprovalResponse(false)}
+                                className="px-4 py-2 bg-red-500/20 text-red-300 hover:bg-red-500/30 font-medium rounded-lg text-sm border border-red-500/20 transition-colors"
+                            >
+                                Deny
+                            </button>
+                            <button
+                                onClick={() => handleApprovalResponse(true)}
+                                className="px-4 py-2 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 font-medium rounded-lg text-sm border border-emerald-500/20 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.15)] focus:ring-2 focus:ring-emerald-500"
+                            >
+                                Approve
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <form
                     onSubmit={handleSubmit}
                     className="p-1 px-4 border border-white/10 bg-neutral-900/90 backdrop-blur-xl shadow-2xl rounded-xl flex items-center gap-3 ring-1 ring-black/5 hover:border-white/20 transition-colors focus-within:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/20"
@@ -137,18 +178,19 @@ export function Terminal() {
                         type="text"
                         value={input}
                         onChange={e => setInput(e.target.value)}
-                        placeholder="Send a natural language command..."
+                        placeholder={approval ? "Waiting for approval..." : "Send a natural language command..."}
                         autoFocus
-                        className="flex-1 bg-transparent py-3 text-sm text-neutral-200 outline-none placeholder-neutral-500 w-full"
+                        disabled={!!approval}
+                        className="flex-1 bg-transparent py-3 text-sm text-neutral-200 outline-none placeholder-neutral-500 w-full disabled:opacity-50"
                     />
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] text-neutral-500 font-sans tracking-wide uppercase px-2 hidden sm:inline-block border-r border-white/10 mr-1">Enter</span>
                         <button
                             type="submit"
-                            disabled={!input.trim()}
+                            disabled={!input.trim() || !!approval}
                             className="p-2 text-white transition-all bg-indigo-500 rounded-lg hover:bg-indigo-400 disabled:opacity-50 disabled:bg-white/5 disabled:text-neutral-500 hover:shadow-lg hover:shadow-indigo-500/20"
                         >
-                            <Send size={15} className={input.trim() ? "translate-x-0.5 -translate-y-0.5" : ""} />
+                            <Send size={15} className={input.trim() && !approval ? "translate-x-0.5 -translate-y-0.5" : ""} />
                         </button>
                     </div>
                 </form>

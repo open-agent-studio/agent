@@ -15,10 +15,21 @@ export class OllamaProvider implements LLMProvider {
     async chat(request: LLMRequest): Promise<LLMResponse> {
         const baseUrl = this.config.baseUrl ?? 'http://localhost:11434';
 
-        const messages = request.messages.map((m) => ({
-            role: m.role,
-            content: m.content,
-        }));
+        const messages = request.messages.map((m) => {
+            const msg: Record<string, unknown> = {
+                role: m.role,
+                content: m.content,
+            };
+            if (m.toolCalls && m.toolCalls.length > 0) {
+                msg.tool_calls = m.toolCalls.map(tc => ({
+                    function: {
+                        name: tc.name,
+                        arguments: tc.args
+                    }
+                }));
+            }
+            return msg;
+        });
 
         const body: Record<string, unknown> = {
             model: this.config.model,
