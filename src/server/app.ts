@@ -143,31 +143,16 @@ export function createStudioServer() {
             socket.join(instanceId);
         });
 
+        // Relays commands from the UI downwards to the actual Agent CLI in the terminal
         socket.on('agent:command', (data: { instanceId: string, command: string }) => {
-            console.log(`[Studio] Received command for ${data.instanceId}: ${data.command}`);
+            console.log(`[Studio] Relaying command to instance ${data.instanceId}`);
+            socket.to(data.instanceId).emit('agent:command', data);
+        });
 
-            // For now, simply mock a system processing response and result 
-            // since we don't have an IPC bridge built into the active CLI instances yet
-            setTimeout(() => {
-                io.to(socket.id).emit('agent:log', {
-                    instanceId: data.instanceId,
-                    text: `[System] Processing command: "${data.command}"...`,
-                    type: 'system'
-                });
-            }, 300);
-
-            setTimeout(() => {
-                let response = `Command executed successfully.`;
-                if (data.command.toLowerCase().includes('hi') || data.command.toLowerCase().includes('hello')) {
-                    response = `Hello! I am connected and receiving your commands.`;
-                }
-
-                io.to(socket.id).emit('agent:log', {
-                    instanceId: data.instanceId,
-                    text: response,
-                    type: 'result'
-                });
-            }, 1200);
+        // Relays live logs from the Agent CLI upwards to all active UI Dashboards
+        socket.on('agent:log', (data: { instanceId: string, text: string, type: string }) => {
+            // we broadcast to the room EXCEPT the sender
+            socket.to(data.instanceId).emit('agent:log', data);
         });
 
         socket.on('disconnect', () => {

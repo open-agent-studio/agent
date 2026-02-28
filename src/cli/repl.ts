@@ -18,6 +18,7 @@ import { zodToJsonSchema } from '../utils/schema.js';
 import { generateRunId } from '../utils/paths.js';
 import { InstanceRegistry } from '../instance/registry.js';
 import type { ExecutionContext } from '../tools/types.js';
+import { io, Socket } from 'socket.io-client';
 
 /**
  * Interactive REPL — the heart of the Claude Code-style experience
@@ -121,6 +122,26 @@ INSTRUCTIONS:
     const slashCtx = { config, skillLoader, commandLoader, hookRegistry, llmRouter, scriptLoader };
     const spinner = new Spinner();
 
+    // ─── Bind Socket to Agent Studio ───
+    const socket: Socket = io('http://localhost:3333', { transports: ['websocket', 'polling'] });
+    socket.on('connect', () => {
+        socket.emit('subscribe', instanceId);
+    });
+
+    socket.on('agent:command', async (data: { instanceId: string, command: string }) => {
+        if (data.instanceId !== instanceId) return;
+
+        socket.emit('agent:log', { instanceId, text: `Executing remote command: ${data.command}`, type: 'system' });
+        try {
+            await executeGoal(undefined, data.command, [], {
+                conversation, llmRouter, registry, policy, toolDefs, ctx, spinner, rl, socket, instanceId
+            });
+            socket.emit('agent:log', { instanceId, text: `Command completed: ${data.command}`, type: 'result' });
+        } catch (e) {
+            socket.emit('agent:log', { instanceId, text: `Error: ${(e as Error).message}`, type: 'error' });
+        }
+    });
+
     const ctx: ExecutionContext = {
         runId: generateRunId(),
         cwd: process.cwd(),
@@ -129,7 +150,10 @@ INSTRUCTIONS:
         dryRun: false,
         approvedPermissions: new Set(),
         onApproval: promptApproval,
-        onProgress: (msg) => spinner.isSpinning ? spinner.update(msg) : undefined,
+        onProgress: (msg) => {
+            if (spinner.isSpinning) spinner.update(msg);
+            socket.emit('agent:log', { instanceId, text: msg, type: 'info' });
+        },
     };
 
     // ─── REPL Loop ───
@@ -232,6 +256,8 @@ interface ExecDeps {
     ctx: ExecutionContext;
     spinner: Spinner;
     rl: ReturnType<typeof createInterface>;
+    socket?: Socket;
+    instanceId?: string;
 }
 
 async function executeGoal(
@@ -350,6 +376,9 @@ async function executeGoal(
                 conversation.addAssistant(response.content);
                 console.log();
                 console.log('  ' + response.content.split('\n').join('\n  '));
+                if (deps.socket && deps.instanceId) {
+                    deps.socket.emit('agent:log', { instanceId: deps.instanceId, text: response.content, type: 'result' });
+                }
             }
 
             renderSummary('Done', Date.now() - start);
