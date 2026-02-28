@@ -58,6 +58,7 @@
         "diff": "^7.0.0",
         "express": "^5.2.1",
         "glob": "^11.0.1",
+        "hnswsqlite": "^0.2.1",
         "inquirer": "^12.4.0",
         "keytar": "^7.9.0",
         "openai": "^4.82.0",
