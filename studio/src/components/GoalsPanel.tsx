@@ -33,8 +33,15 @@ export function GoalsPanel() {
     const [showCreate, setShowCreate] = useState(false);
     const [form, setForm] = useState({ title: '', description: '', priority: 1 });
 
-    const load = () => {
-        fetch(`${API}/instances/${id}/goals`).then(r => r.json()).then(setData).catch(console.error);
+    const emptyData = { stats: { activeGoals: 0, completedGoals: 0, pendingTasks: 0 }, goals: [] };
+
+    const load = async () => {
+        try {
+            const res = await fetch(`${API}/instances/${id}/goals`);
+            if (!res.ok) { setData(emptyData); return; }
+            const d = await res.json();
+            setData(d ?? emptyData);
+        } catch { setData(emptyData); }
     };
 
     useEffect(() => { load(); }, [id]);
@@ -71,6 +78,8 @@ export function GoalsPanel() {
 
     if (!data) return <div className="p-8 text-neutral-500 animate-pulse">Loading goals...</div>;
 
+    const stats = data.stats ?? { activeGoals: 0, completedGoals: 0, pendingTasks: 0 };
+
     return (
         <div className="flex flex-col h-full bg-neutral-950 overflow-y-auto p-8">
             {/* Stats Bar */}
@@ -80,7 +89,7 @@ export function GoalsPanel() {
                         <Target className="text-indigo-400" size={22} /> Goals & Tasks
                     </h2>
                     <p className="text-neutral-500 text-sm mt-1">
-                        {data.stats.activeGoals} active · {data.stats.completedGoals} completed · {data.stats.pendingTasks} pending tasks
+                        {stats.activeGoals} active · {stats.completedGoals} completed · {stats.pendingTasks} pending tasks
                     </p>
                 </div>
                 <button

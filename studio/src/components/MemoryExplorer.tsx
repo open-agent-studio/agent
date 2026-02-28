@@ -20,17 +20,27 @@ export function MemoryExplorer() {
     const [showAdd, setShowAdd] = useState(false);
     const [form, setForm] = useState({ content: '', category: 'general', tags: '' });
 
-    const load = () => {
-        fetch(`${API}/instances/${id}/memory`).then(r => r.json()).then(setData).catch(console.error);
+    const emptyData = { stats: { total: 0, byCategory: {}, bySource: {} }, memories: [] };
+
+    const load = async () => {
+        try {
+            const res = await fetch(`${API}/instances/${id}/memory`);
+            if (!res.ok) { setData(emptyData); return; }
+            const d = await res.json();
+            setData(d ?? emptyData);
+        } catch { setData(emptyData); }
     };
 
     useEffect(() => { load(); }, [id]);
 
     const search = async () => {
         if (!searchQuery.trim()) { setSearchResults(null); return; }
-        const res = await fetch(`${API}/instances/${id}/memory/search?q=${encodeURIComponent(searchQuery)}`);
-        const d = await res.json();
-        setSearchResults(d.results || []);
+        try {
+            const res = await fetch(`${API}/instances/${id}/memory/search?q=${encodeURIComponent(searchQuery)}`);
+            if (!res.ok) { setSearchResults([]); return; }
+            const d = await res.json();
+            setSearchResults(d.results || []);
+        } catch { setSearchResults([]); }
     };
 
     const addMemory = async () => {
@@ -54,6 +64,7 @@ export function MemoryExplorer() {
 
     if (!data) return <div className="p-8 text-neutral-500 animate-pulse">Loading memories...</div>;
 
+    const stats = data.stats ?? { total: 0, byCategory: {}, bySource: {} };
     const memories = searchResults ?? data.memories ?? [];
 
     return (
@@ -63,7 +74,7 @@ export function MemoryExplorer() {
                     <h2 className="text-xl font-semibold flex items-center gap-2">
                         <Brain className="text-violet-400" size={22} /> Memory Explorer
                     </h2>
-                    <p className="text-neutral-500 text-sm mt-1">{data.stats.total} memories stored</p>
+                    <p className="text-neutral-500 text-sm mt-1">{stats.total} memories stored</p>
                 </div>
                 <button onClick={() => setShowAdd(!showAdd)}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-500/20 border border-violet-500/30 text-violet-300 text-sm font-medium hover:bg-violet-500/30 transition-colors">
@@ -73,7 +84,7 @@ export function MemoryExplorer() {
 
             {/* Stats */}
             <div className="grid grid-cols-5 gap-3 mb-6">
-                {Object.entries(data.stats.byCategory || {}).map(([cat, count]) => (
+                {Object.entries(stats.byCategory || {}).map(([cat, count]) => (
                     <div key={cat} className="border border-white/10 rounded-lg p-3 bg-white/[0.02] text-center">
                         <div className={`text-xs font-medium uppercase tracking-wider ${categoryColors[cat]?.split(' ')[0] ?? 'text-neutral-400'}`}>{cat}</div>
                         <div className="text-lg font-semibold text-neutral-200 mt-1">{count as number}</div>
