@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Code, Wrench, Package, FileCode } from 'lucide-react';
+import { Code, Wrench, Package, FileCode } from 'lucide-react';
 
 export function Capabilities() {
     const { id } = useParams<{ id: string }>();
