@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Terminal, Activity, Workflow, Server, ArrowLeft, Zap, Blocks, Bot
 } from 'lucide-react';
@@ -143,6 +143,7 @@ function Dashboard() {
 
 function InstanceView() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   // extracting the "action" route from window location for our simple tab navigation
   const currentTab = window.location.pathname.split('/').pop() || 'console';
 
@@ -158,16 +159,16 @@ function InstanceView() {
         </div>
 
         <nav className="p-3 space-y-1 mt-2">
-          <Link to="console" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'console' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
+          <Link to={`/instance/${id}/console`} className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'console' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
             <Terminal size={16} /> Console
           </Link>
-          <Link to="capabilities" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'capabilities' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
+          <Link to={`/instance/${id}/capabilities`} className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'capabilities' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
             <Zap size={16} /> Capabilities
           </Link>
-          <Link to="goals" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'goals' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
+          <Link to={`/instance/${id}/goals`} className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'goals' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
             <Blocks size={16} /> Goals / Workflow
           </Link>
-          <Link to="memory" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'memory' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
+          <Link to={`/instance/${id}/memory`} className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === 'memory' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'}`}>
             <Bot size={16} /> Memory
           </Link>
         </nav>
