@@ -18,7 +18,8 @@ import { zodToJsonSchema } from '../utils/schema.js';
 import { generateRunId } from '../utils/paths.js';
 import { InstanceRegistry } from '../instance/registry.js';
 import type { ExecutionContext } from '../tools/types.js';
-import { io, Socket } from 'socket.io-client';
+import { io, type Socket } from 'socket.io-client';
+import { checkForUpdates } from './updater.js';
 
 /**
  * Interactive REPL — the heart of the Claude Code-style experience
@@ -83,6 +84,9 @@ export async function startREPL(): Promise<void> {
         scriptCount: scriptLoader.list().length,
         provider: modelName,
     });
+
+    // ─── Auto-update check (non-blocking) ───
+    await checkForUpdates('0.9.7');
 
     // ─── Prepare tool definitions for LLM ───
     const allTools = registry.list();
