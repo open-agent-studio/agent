@@ -540,7 +540,7 @@ export function createStudioServer() {
             const inst = await resolveInstance(req.params.id);
             if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
 
-            const daemon = new DaemonManager();
+            const daemon = new DaemonManager(inst.cwd);
             const status = await daemon.status();
             res.json(status);
         } catch (err) {
@@ -553,7 +553,7 @@ export function createStudioServer() {
             const inst = await resolveInstance(req.params.id);
             if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
 
-            const daemon = new DaemonManager();
+            const daemon = new DaemonManager(inst.cwd);
             const result = await daemon.start();
             res.json(result);
         } catch (err) {
@@ -566,7 +566,7 @@ export function createStudioServer() {
             const inst = await resolveInstance(req.params.id);
             if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
 
-            const daemon = new DaemonManager();
+            const daemon = new DaemonManager(inst.cwd);
             const result = await daemon.stop();
             res.json(result);
         } catch (err) {
@@ -579,7 +579,7 @@ export function createStudioServer() {
             const inst = await resolveInstance(req.params.id);
             if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
 
-            const daemon = new DaemonManager();
+            const daemon = new DaemonManager(inst.cwd);
             const lines = parseInt(req.query.lines as string) || 50;
             const logs = await daemon.getLogs(lines);
             res.json({ logs });

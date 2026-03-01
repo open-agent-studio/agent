@@ -9,10 +9,12 @@ import { getAgentDir } from '../utils/paths.js';
 export class DaemonManager {
     private pidFile: string;
     private logFile: string;
+    private cwd: string;
 
-    constructor() {
-        this.pidFile = path.join(getAgentDir(), 'daemon.pid');
-        this.logFile = path.join(getAgentDir(), 'daemon.log');
+    constructor(cwd: string = process.cwd()) {
+        this.cwd = cwd;
+        this.pidFile = path.join(getAgentDir(cwd), 'daemon.pid');
+        this.logFile = path.join(getAgentDir(cwd), 'daemon.log');
     }
 
     /**
@@ -38,11 +40,11 @@ export class DaemonManager {
         const child: ChildProcess = fork(daemonScript, [], {
             detached: true,
             stdio: 'ignore',
-            cwd: process.cwd(),
+            cwd: this.cwd,
             env: {
                 ...process.env,
                 AGENT_DAEMON: '1',
-                AGENT_WORK_DIR: process.cwd(),
+                AGENT_WORK_DIR: this.cwd,
             },
         });
 

@@ -11,8 +11,8 @@ export function resolveProjectPath(...segments: string[]): string {
 /**
  * Get the .agent directory path for the current project
  */
-export function getAgentDir(): string {
-    return resolveProjectPath('.agent');
+export function getAgentDir(cwd: string = process.cwd()): string {
+    return path.resolve(cwd, '.agent');
 }
 
 /**
