@@ -51,13 +51,31 @@ export class ScriptLoader {
         let count = 0;
 
         for (const entry of entries) {
-            if (!entry.isDirectory()) continue;
-
-            const scriptDir = path.join(dirPath, entry.name);
-            const script = await this.loadScript(scriptDir, source);
-            if (script) {
-                this.scripts.set(script.manifest.name, script);
-                count++;
+            if (entry.isDirectory()) {
+                // Standard structure: subdirectory with script.yaml
+                const scriptDir = path.join(dirPath, entry.name);
+                const script = await this.loadScript(scriptDir, source);
+                if (script) {
+                    this.scripts.set(script.manifest.name, script);
+                    count++;
+                }
+            } else if (entry.isFile() && /\.(sh|py|js|ts)$/.test(entry.name)) {
+                // Standalone script file (e.g. created by daemon self-scripting)
+                const scriptName = entry.name.replace(/\.(sh|py|js|ts)$/, '');
+                if (!this.scripts.has(scriptName)) {
+                    const filePath = path.join(dirPath, entry.name);
+                    this.scripts.set(scriptName, {
+                        manifest: {
+                            name: scriptName,
+                            description: `Standalone script: ${entry.name}`,
+                            entrypoint: entry.name,
+                        } as any,
+                        path: dirPath,
+                        entrypointPath: filePath,
+                        source,
+                    });
+                    count++;
+                }
             }
         }
 

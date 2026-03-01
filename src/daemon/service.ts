@@ -351,7 +351,7 @@ export class DaemonService {
                         permissions: { required: ['*'] as any },
                         entrypoint: 'prompt.md'
                     },
-                    promptContent: `# Task Execution\n\nYou are an autonomous agent daemon executing a task. Use the available tools to complete it.\n\n## Task Details\n- **Title:** ${task.title}\n- **Description:** ${task.description || 'No additional description.'}\n\n## Input Context\n${JSON.stringify(task.input || {}, null, 2)}\n\n## Instructions\n1. Analyze what needs to be done\n2. Use the available tools (fs.read, fs.write, fs.mkdir, cmd.run, etc.) to execute the task\n3. If the task requires complex multi-step logic, you can:\n   - Write a shell script to \`.agent/scripts/<name>.sh\` using fs.write and execute it with cmd.run\n   - Create a reusable skill in \`.agent/skills/<name>/\` with skill.json + prompt.md\n4. Report what was accomplished\n\n## Important\n- Working directory: ${this.workDir}\n- You have FULL permission to read/write files and run commands\n- Be specific and actionable — actually create files and run commands, don't just describe what to do\n- If creating files, use the fs.write tool with the full file path and content`
+                    promptContent: this.buildTaskPrompt(task)
                 };
             }
 
@@ -438,6 +438,44 @@ export class DaemonService {
         await this.instanceRegistry.unregister(this.instanceId).catch(() => { });
 
         process.exit(0);
+    }
+
+    /**
+     * Build the ephemeral skill prompt for a task
+     */
+    private buildTaskPrompt(task: Task): string {
+        const lines = [
+            '# Task Execution',
+            '',
+            'You are an autonomous agent daemon executing a task. Use the available tools to complete it.',
+            '',
+            '## Task Details',
+            `- **Title:** ${task.title}`,
+            `- **Description:** ${task.description || 'No additional description.'}`,
+            '',
+            '## Input Context',
+            JSON.stringify(task.input || {}, null, 2),
+            '',
+            '## Instructions',
+            '1. Analyze what needs to be done',
+            '2. Use the available tools (fs.read, fs.write, fs.mkdir, cmd.run, etc.) to execute the task',
+            '3. If the task requires a script, create it in the proper structure:',
+            `   - Create directory: ${this.workDir}/.agent/scripts/<script-name>/`,
+            `   - Write manifest to: ${this.workDir}/.agent/scripts/<script-name>/script.yaml`,
+            '     Contents: name: <script-name>, description: <what it does>, entrypoint: run.sh',
+            `   - Write script to: ${this.workDir}/.agent/scripts/<script-name>/run.sh`,
+            '   - Make executable: chmod +x on the run.sh',
+            '   - Execute it with cmd.run',
+            '4. Report what was accomplished',
+            '',
+            '## Important',
+            `- Working directory: ${this.workDir}`,
+            '- You have FULL permission to read/write files and run commands',
+            '- Be specific and actionable — actually create files and run commands',
+            '- If creating files, use the fs.write tool with the full file path and content',
+            '- NEVER use infinite loops (while true). Always use fixed iterations (for i in {1..N})',
+        ];
+        return lines.join('\n');
     }
 
     /**
