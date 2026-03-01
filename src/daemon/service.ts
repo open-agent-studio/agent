@@ -15,6 +15,7 @@ import { SkillLoader } from '../skills/loader.js';
 import { LLMRouter } from '../llm/router.js';
 import { SkillRunner } from '../skills/runner.js';
 import { registerCoreTools } from '../cli/commands/init.js';
+import type { LoadedSkill } from '../skills/types.js';
 
 /**
  * Daemon Service — The autonomous agent heartbeat
@@ -225,48 +226,61 @@ export class DaemonService {
      * Execute a single task
      */
     private async executeTask(task: Task): Promise<string> {
-        if (task.skill) {
-            try {
-                const configLoader = new ConfigLoader(this.workDir);
-                const config = await configLoader.load();
+        try {
+            const configLoader = new ConfigLoader(this.workDir);
+            const config = await configLoader.load();
 
-                const registry = ToolRegistry.getInstance();
-                registerCoreTools(registry);
+            const registry = ToolRegistry.getInstance();
+            registerCoreTools(registry);
 
-                const policy = new PolicyEngine(config, this.workDir);
-                const llmRouter = new LLMRouter(config);
-                const skillLoader = new SkillLoader(config);
+            const policy = new PolicyEngine(config, this.workDir);
+            const llmRouter = new LLMRouter(config);
+            const skillLoader = new SkillLoader(config);
 
-                await skillLoader.loadAll();
+            await skillLoader.loadAll();
 
-                const loadedSkill = skillLoader.get(task.skill);
-                if (!loadedSkill) {
-                    throw new Error(`Skill not found: ${task.skill}`);
-                }
+            let loadedSkill: LoadedSkill | undefined;
 
-                const runner = new SkillRunner(registry, policy, llmRouter);
-                const result = await runner.run(loadedSkill, task.input || {}, {
-                    cwd: this.workDir,
-                    runId: `daemon-task-${task.id}`,
-                    config,
-                    approvedPermissions: new Set(['*']),
-                    autonomous: true,
-                });
-
-                if (result.success) {
-                    return typeof result.output === 'string'
-                        ? result.output
-                        : JSON.stringify(result.output, null, 2);
-                } else {
-                    throw new Error(result.error || 'Skill execution failed');
-                }
-            } catch (err) {
-                throw new Error(`Failed to run skill ${task.skill}: ${(err as Error).message}`);
+            if (task.skill) {
+                loadedSkill = skillLoader.get(task.skill);
             }
-        }
 
-        // If no skill, treat as a simple logged action
-        return `Task "${task.title}" processed`;
+            // If no explicit skill matches, generate an ephemeral skill for free-form instructions
+            if (!loadedSkill) {
+                loadedSkill = {
+                    path: this.workDir,
+                    manifest: {
+                        name: `ephemeral-task-${task.id}`,
+                        version: '1.0.0',
+                        description: task.title,
+                        inputs: {},
+                        tools: ['*'],
+                        permissions: { required: ['*'] as any },
+                        entrypoint: 'prompt.md'
+                    },
+                    promptContent: `# Task Details\n\nTitle: ${task.title}\n\nDescription: ${task.description || 'No additional description provided.'}\n\nInput Context:\n${JSON.stringify(task.input || {}, null, 2)}\n\nPlease execute this task using the available tools.`
+                };
+            }
+
+            const runner = new SkillRunner(registry, policy, llmRouter);
+            const result = await runner.run(loadedSkill, task.input || {}, {
+                cwd: this.workDir,
+                runId: `daemon-task-${task.id}`,
+                config,
+                approvedPermissions: new Set(['*']),
+                autonomous: true,
+            });
+
+            if (result.success) {
+                return typeof result.output === 'string'
+                    ? result.output
+                    : JSON.stringify(result.output, null, 2);
+            } else {
+                throw new Error(result.error || 'Task execution failed');
+            }
+        } catch (err) {
+            throw new Error(`Failed to execute task: ${(err as Error).message}`);
+        }
     }
 
     /**
