@@ -32,6 +32,8 @@ export function GoalsPanel() {
     const [expanded, setExpanded] = useState<Set<number>>(new Set());
     const [showCreate, setShowCreate] = useState(false);
     const [form, setForm] = useState({ title: '', description: '', priority: 1 });
+    const [showAddTask, setShowAddTask] = useState<number | null>(null);
+    const [taskForm, setTaskForm] = useState({ title: '', description: '', skill: '' });
 
     const emptyData = { stats: { activeGoals: 0, completedGoals: 0, pendingTasks: 0 }, goals: [] };
 
@@ -60,6 +62,17 @@ export function GoalsPanel() {
         });
         setForm({ title: '', description: '', priority: 1 });
         setShowCreate(false);
+        load();
+    };
+
+    const addTask = async (goalId: number) => {
+        if (!taskForm.title.trim()) return;
+        await fetch(`${API}/instances/${id}/goals/${goalId}/tasks`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(taskForm),
+        });
+        setTaskForm({ title: '', description: '', skill: '' });
+        setShowAddTask(null);
         load();
     };
 
@@ -182,6 +195,34 @@ export function GoalsPanel() {
                                                 <span className={`text-xs px-2 py-0.5 rounded border ${statusColors[task.status] ?? ''}`}>{task.status}</span>
                                             </div>
                                         ))}
+                                    </div>
+                                )}
+
+                                {isExpanded && (
+                                    <div className="bg-neutral-900/30 px-6 py-3 border-t border-white/5 flex flex-col gap-2">
+                                        {showAddTask === goal.id ? (
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    value={taskForm.title} onChange={e => setTaskForm({ ...taskForm, title: e.target.value })}
+                                                    placeholder="Task title..."
+                                                    className="flex-1 bg-neutral-900 border border-white/10 rounded-lg px-3 py-1.5 text-sm placeholder-neutral-600 focus:outline-none focus:border-indigo-500/50"
+                                                />
+                                                <input
+                                                    value={taskForm.skill} onChange={e => setTaskForm({ ...taskForm, skill: e.target.value })}
+                                                    placeholder="Skill (e.g. read-file)..."
+                                                    className="w-40 bg-neutral-900 border border-white/10 rounded-lg px-3 py-1.5 text-sm placeholder-neutral-600 focus:outline-none focus:border-indigo-500/50"
+                                                />
+                                                <button onClick={() => addTask(goal.id)} className="px-3 py-1.5 rounded-lg bg-indigo-500 text-white text-sm font-medium hover:bg-indigo-600 transition-colors">Save</button>
+                                                <button onClick={() => setShowAddTask(null)} className="px-2 py-1.5 rounded-lg text-neutral-500 hover:text-neutral-300">Cancel</button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => setShowAddTask(goal.id)}
+                                                className="self-start flex items-center gap-1.5 text-sm font-medium text-neutral-500 hover:text-indigo-400 transition-colors"
+                                            >
+                                                <Plus size={14} /> Add Task
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>

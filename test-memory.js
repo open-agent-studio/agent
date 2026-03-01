@@ -1,0 +1,10 @@
+import { MemoryStore } from './dist/src/memory/store.js';
+const p = process.argv[2] || process.cwd();
+console.log("Opening memory store at", p);
+const store = MemoryStore.open(p);
+console.log("Listing memories...");
+const list = store.list();
+console.log("Memories:", list.length);
+console.log("Getting stats...");
+const stats = store.stats();
+console.log("Stats:", stats);

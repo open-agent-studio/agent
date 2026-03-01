@@ -152,7 +152,7 @@ function Dashboard() {
 const sidebarItems = [
   { icon: Terminal, label: 'Console', path: 'console' },
   { icon: Zap, label: 'Capabilities', path: 'capabilities' },
-  { icon: Target, label: 'Goals & Plans', path: 'goals' },
+  { icon: Target, label: 'Goals & Tasks', path: 'goals' },
   { icon: Wrench, label: 'Skills', path: 'skills' },
   { icon: Code, label: 'Commands', path: 'commands' },
   { icon: FileCode, label: 'Scripts', path: 'scripts' },
@@ -183,8 +183,8 @@ function InstanceView() {
               key={path}
               to={`/instance/${id}/${path}`}
               className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === path
-                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                  : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
+                ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
                 }`}
             >
               <Icon size={15} /> {label}
