@@ -20,6 +20,7 @@ import { InstanceRegistry } from '../instance/registry.js';
 import type { ExecutionContext } from '../tools/types.js';
 import { io, type Socket } from 'socket.io-client';
 import { checkForUpdates } from './updater.js';
+import { getAgentVersion } from '../utils/version.js';
 
 /**
  * Interactive REPL — the heart of the Claude Code-style experience
@@ -76,8 +77,10 @@ export async function startREPL(): Promise<void> {
     const providerConfig = config.models.providers[defaultProvider];
     const modelName = providerConfig?.model ?? defaultProvider;
 
+    const currentVersion = getAgentVersion();
+
     renderBanner(config, {
-        version: '0.9.9',
+        version: currentVersion,
         project: projectName,
         skillCount: skillLoader.list().length,
         commandCount: commandLoader.list().length,
@@ -86,7 +89,7 @@ export async function startREPL(): Promise<void> {
     });
 
     // ─── Auto-update check (non-blocking) ───
-    await checkForUpdates('0.9.9');
+    await checkForUpdates(currentVersion);
 
     // ─── Prepare tool definitions for LLM ───
     const allTools = registry.list();

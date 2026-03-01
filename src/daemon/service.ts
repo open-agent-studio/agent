@@ -304,6 +304,11 @@ export class DaemonService {
                 `${goalStats.pendingTasks} pending, ${goalStats.runningTasks} running`
             );
         }
+
+        // Auto-start processing if tasks are pending
+        if (goalStats.pendingTasks > 0 && goalStats.runningTasks === 0) {
+            await this.processGoalQueue();
+        }
     }
 
     /**

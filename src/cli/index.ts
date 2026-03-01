@@ -16,6 +16,7 @@ import { createPluginsCommand } from './commands/plugins.js';
 import { createScriptsCommand } from './commands/scripts-cmd.js';
 import { createStudioCommand } from './commands/studio-cmd.js';
 import { createUpdateCommand } from './commands/update.js';
+import { getAgentVersion } from '../utils/version.js';
 
 /**
  * Create the CLI program with all commands
@@ -26,7 +27,7 @@ export function createCLI(): Command {
     program
         .name('agent')
         .description('Agent Runtime — autonomous, goal-oriented AI agent with skills, plans, memory, and permissioned tools')
-        .version('0.9.9')
+        .version(getAgentVersion())
         .option('--verbose', 'Enable verbose output')
         .option('--no-color', 'Disable colored output')
         .option('--config <path>', 'Path to config file');
