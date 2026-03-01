@@ -38,6 +38,7 @@ export interface Task {
     requires_approval: boolean;
     approved_at: string | null;
     created_at: string;
+    recurrence: string | null;
 }
 
 export class GoalStore {
@@ -46,6 +47,18 @@ export class GoalStore {
     constructor(memoryStore: MemoryStore) {
         // Reuse the same database from MemoryStore
         this.db = (memoryStore as any).db;
+        this.ensureRecurrenceColumn();
+    }
+
+    /**
+     * Migration: add recurrence column if it doesn't exist
+     */
+    private ensureRecurrenceColumn(): void {
+        try {
+            this.db.prepare("SELECT recurrence FROM tasks LIMIT 1").get();
+        } catch {
+            this.db.prepare("ALTER TABLE tasks ADD COLUMN recurrence TEXT").run();
+        }
     }
 
     // ─── Goal Operations ──────────────────────────────────────
@@ -128,8 +141,8 @@ export class GoalStore {
             UPDATE goals SET progress = ?, updated_at = datetime('now') WHERE id = ?
         `).run(progress, id);
 
-        // Auto-complete goal if all tasks done
-        if (progress >= 1.0) {
+        // Auto-complete goal if all tasks done — but NOT if it has recurring tasks
+        if (progress >= 1.0 && !this.hasRecurringTasks(id)) {
             this.updateGoalStatus(id, 'completed');
         }
     }
@@ -157,11 +170,12 @@ export class GoalStore {
             dependsOn?: number[];
             requiresApproval?: boolean;
             scheduledAt?: string;
+            recurrence?: string;
         } = {}
     ): Task {
         const stmt = this.db.prepare(`
-            INSERT INTO tasks (goal_id, title, description, skill, input, depends_on, requires_approval, scheduled_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tasks (goal_id, title, description, skill, input, depends_on, requires_approval, scheduled_at, recurrence)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const result = stmt.run(
             goalId,
@@ -171,7 +185,8 @@ export class GoalStore {
             JSON.stringify(options.input ?? {}),
             JSON.stringify(options.dependsOn ?? []),
             options.requiresApproval ? 1 : 0,
-            options.scheduledAt ?? null
+            options.scheduledAt ?? null,
+            options.recurrence ?? null
         );
 
         this.logAudit('task.created', 'task', result.lastInsertRowid as number, title);
@@ -202,11 +217,13 @@ export class GoalStore {
      */
     getNextTask(): Task | null {
         // Get all pending/queued tasks ordered by goal priority
+        // Only pick tasks whose scheduled_at is null or in the past
         const candidates = this.db.prepare(`
             SELECT t.* FROM tasks t
             JOIN goals g ON t.goal_id = g.id
             WHERE t.status IN ('pending', 'queued')
             AND g.status = 'active'
+            AND (t.scheduled_at IS NULL OR t.scheduled_at <= datetime('now'))
             ORDER BY g.priority ASC, t.id ASC
         `).all() as any[];
 
@@ -227,6 +244,30 @@ export class GoalStore {
         }
 
         return null;
+    }
+
+    /**
+     * Get active goals that have zero tasks (need decomposition)
+     */
+    getGoalsNeedingDecomposition(): Goal[] {
+        const rows = this.db.prepare(`
+            SELECT g.* FROM goals g
+            WHERE g.status = 'active'
+            AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.goal_id = g.id)
+            ORDER BY g.priority ASC
+        `).all() as any[];
+        return rows.map(r => ({ ...r, metadata: JSON.parse(r.metadata || '{}') }));
+    }
+
+    /**
+     * Check if a goal has any recurring tasks
+     */
+    hasRecurringTasks(goalId: number): boolean {
+        const row = this.db.prepare(`
+            SELECT COUNT(*) as c FROM tasks
+            WHERE goal_id = ? AND recurrence IS NOT NULL
+        `).get(goalId) as any;
+        return row.c > 0;
     }
 
     /**
@@ -352,6 +393,7 @@ export class GoalStore {
             input: JSON.parse(row.input || '{}'),
             depends_on: JSON.parse(row.depends_on || '[]'),
             requires_approval: !!row.requires_approval,
+            recurrence: row.recurrence ?? null,
         };
     }
 

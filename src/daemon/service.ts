@@ -16,6 +16,7 @@ import { SkillLoader } from '../skills/loader.js';
 import { LLMRouter } from '../llm/router.js';
 import { SkillRunner } from '../skills/runner.js';
 import { registerCoreTools } from '../cli/commands/init.js';
+import { GoalDecomposer } from '../goals/decomposer.js';
 import type { LoadedSkill } from '../skills/types.js';
 
 /**
@@ -191,6 +192,12 @@ export class DaemonService {
      * Process the goal/task queue
      */
     private async processGoalQueue(): Promise<void> {
+        // Step 1: Auto-decompose any goals that have no tasks yet
+        const goalsNeedingDecomposition = this.goalStore.getGoalsNeedingDecomposition();
+        for (const goal of goalsNeedingDecomposition) {
+            await this.decomposeGoal(goal);
+        }
+
         const task = this.goalStore.getNextTask();
         if (!task) return;
 
@@ -215,6 +222,19 @@ export class DaemonService {
                 ['task', 'completed']
             );
 
+            // If this is a recurring task, create the next occurrence
+            if (task.recurrence) {
+                const nextRun = this.calculateNextRun(task.recurrence);
+                this.goalStore.addTask(task.goal_id, task.title, {
+                    description: task.description ?? undefined,
+                    skill: task.skill ?? undefined,
+                    input: task.input,
+                    recurrence: task.recurrence,
+                    scheduledAt: nextRun,
+                });
+                await this.log(`🔁 Recurring task re-created, next run: ${nextRun}`);
+            }
+
             // Check if there are more tasks to process
             await this.processGoalQueue();
 
@@ -224,6 +244,75 @@ export class DaemonService {
             this.stats.tasksFailed++;
             await this.log(`❌ Task #${task.id} failed: ${error}`);
         }
+    }
+
+    /**
+     * Auto-decompose a goal into tasks using LLM
+     */
+    private async decomposeGoal(goal: import('../goals/store.js').Goal): Promise<void> {
+        try {
+            await this.log(`🧠 Auto-decomposing goal #${goal.id}: "${goal.title}"`);
+
+            const configLoader = new ConfigLoader(this.workDir);
+            const config = await configLoader.load();
+            const llmRouter = new LLMRouter(config);
+            const decomposer = new GoalDecomposer(llmRouter, this.memoryStore, this.goalStore);
+
+            const tasks = await decomposer.decomposeAndCreate(goal);
+            await this.log(`   ✅ Created ${tasks.length} subtask(s) for goal #${goal.id}`);
+
+            for (const t of tasks) {
+                await this.log(`      → Task #${t.id}: "${t.title}"${t.skill ? ` [skill: ${t.skill}]` : ''}`);
+            }
+        } catch (err) {
+            await this.log(`   ❌ Decomposition failed for goal #${goal.id}: ${(err as Error).message}`);
+            // Create a fallback task so the goal isn't stuck
+            this.goalStore.addTask(goal.id, goal.title, {
+                description: `Auto-decomposition failed. Execute this goal directly: ${goal.description || goal.title}`,
+            });
+        }
+    }
+
+    /**
+     * Calculate next run time for a recurring task
+     */
+    private calculateNextRun(recurrence: string): string {
+        const now = new Date();
+
+        switch (recurrence.toLowerCase()) {
+            case 'hourly':
+                now.setHours(now.getHours() + 1);
+                break;
+            case 'daily':
+                now.setDate(now.getDate() + 1);
+                break;
+            case 'weekly':
+                now.setDate(now.getDate() + 7);
+                break;
+            case 'monthly':
+                now.setMonth(now.getMonth() + 1);
+                break;
+            default: {
+                // Try parsing as a relative duration like "every 30 minutes" or "every 2 hours"
+                const match = recurrence.match(/every\s+(\d+)\s*(minute|hour|day|week)s?/i);
+                if (match) {
+                    const amount = parseInt(match[1]);
+                    const unit = match[2].toLowerCase();
+                    switch (unit) {
+                        case 'minute': now.setMinutes(now.getMinutes() + amount); break;
+                        case 'hour': now.setHours(now.getHours() + amount); break;
+                        case 'day': now.setDate(now.getDate() + amount); break;
+                        case 'week': now.setDate(now.getDate() + (amount * 7)); break;
+                    }
+                } else {
+                    // Default: run again in 24 hours
+                    now.setDate(now.getDate() + 1);
+                }
+                break;
+            }
+        }
+
+        return now.toISOString().replace('T', ' ').slice(0, 19);
     }
 
     /**
@@ -262,7 +351,7 @@ export class DaemonService {
                         permissions: { required: ['*'] as any },
                         entrypoint: 'prompt.md'
                     },
-                    promptContent: `# Task Details\n\nTitle: ${task.title}\n\nDescription: ${task.description || 'No additional description provided.'}\n\nInput Context:\n${JSON.stringify(task.input || {}, null, 2)}\n\nPlease execute this task using the available tools.`
+                    promptContent: `# Task Execution\n\nYou are an autonomous agent daemon executing a task. Use the available tools to complete it.\n\n## Task Details\n- **Title:** ${task.title}\n- **Description:** ${task.description || 'No additional description.'}\n\n## Input Context\n${JSON.stringify(task.input || {}, null, 2)}\n\n## Instructions\n1. Analyze what needs to be done\n2. Use the available tools (fs.read, fs.write, fs.mkdir, cmd.run, etc.) to execute the task\n3. If the task requires complex multi-step logic, you can:\n   - Write a shell script to \`.agent/scripts/<name>.sh\` using fs.write and execute it with cmd.run\n   - Create a reusable skill in \`.agent/skills/<name>/\` with skill.json + prompt.md\n4. Report what was accomplished\n\n## Important\n- Working directory: ${this.workDir}\n- You have FULL permission to read/write files and run commands\n- Be specific and actionable — actually create files and run commands, don't just describe what to do\n- If creating files, use the fs.write tool with the full file path and content`
                 };
             }
 

@@ -133,6 +133,7 @@ export class MemoryStore {
                 error TEXT,
                 requires_approval BOOLEAN DEFAULT 0,
                 approved_at DATETIME,
+                recurrence TEXT,
                 created_at DATETIME DEFAULT (datetime('now'))
             );
 
