@@ -8,6 +8,14 @@ import { loadTriggers, type TriggerConfig } from './triggers.js';
 import { getAgentDir } from '../utils/paths.js';
 import { InstanceRegistry } from '../instance/registry.js';
 
+import { ConfigLoader } from '../config/loader.js';
+import { ToolRegistry } from '../tools/registry.js';
+import { PolicyEngine } from '../policy/engine.js';
+import { SkillLoader } from '../skills/loader.js';
+import { LLMRouter } from '../llm/router.js';
+import { SkillRunner } from '../skills/runner.js';
+import { registerCoreTools } from '../cli/commands/init.js';
+
 /**
  * Daemon Service — The autonomous agent heartbeat
  *
@@ -218,9 +226,43 @@ export class DaemonService {
      */
     private async executeTask(task: Task): Promise<string> {
         if (task.skill) {
-            // In full implementation, this invokes the skill runner with the LLM
-            // For now, use shell execution for skills that have runnable commands
-            return `Task "${task.title}" processed (skill: ${task.skill})`;
+            try {
+                const configLoader = new ConfigLoader(this.workDir);
+                const config = await configLoader.load();
+
+                const registry = ToolRegistry.getInstance();
+                registerCoreTools(registry);
+
+                const policy = new PolicyEngine(config, this.workDir);
+                const llmRouter = new LLMRouter(config);
+                const skillLoader = new SkillLoader(config);
+
+                await skillLoader.loadAll();
+
+                const loadedSkill = skillLoader.get(task.skill);
+                if (!loadedSkill) {
+                    throw new Error(`Skill not found: ${task.skill}`);
+                }
+
+                const runner = new SkillRunner(registry, policy, llmRouter);
+                const result = await runner.run(loadedSkill, task.input || {}, {
+                    cwd: this.workDir,
+                    runId: `daemon-task-${task.id}`,
+                    config,
+                    approvedPermissions: new Set(['*']),
+                    autonomous: true,
+                });
+
+                if (result.success) {
+                    return typeof result.output === 'string'
+                        ? result.output
+                        : JSON.stringify(result.output, null, 2);
+                } else {
+                    throw new Error(result.error || 'Skill execution failed');
+                }
+            } catch (err) {
+                throw new Error(`Failed to run skill ${task.skill}: ${(err as Error).message}`);
+            }
         }
 
         // If no skill, treat as a simple logged action
