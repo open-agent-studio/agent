@@ -29,8 +29,8 @@ export class PolicyEngine {
         for (const perm of action.permissions) {
             const rule = this.findRule(perm);
 
-            // If session has pre-approved this permission
-            if (ctx.approvedPermissions.has(perm) || this.sessionApprovals.has(`${action.tool}:${perm}`)) {
+            // If session has pre-approved this permission (or all via wildcard)
+            if (ctx.approvedPermissions.has('*') || ctx.approvedPermissions.has(perm) || this.sessionApprovals.has(`${action.tool}:${perm}`)) {
                 continue;
             }
 
