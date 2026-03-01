@@ -7,6 +7,7 @@ import { GoalStore, type Task } from '../goals/store.js';
 import { loadTriggers, type TriggerConfig } from './triggers.js';
 import { getAgentDir } from '../utils/paths.js';
 import { InstanceRegistry } from '../instance/registry.js';
+import * as dotenv from 'dotenv';
 
 import { ConfigLoader } from '../config/loader.js';
 import { ToolRegistry } from '../tools/registry.js';
@@ -60,6 +61,9 @@ export class DaemonService {
         if (this.running) return;
         this.running = true;
         this.startedAt = new Date();
+
+        // Ensure environment variables from .env are loaded
+        dotenv.config({ path: path.join(this.workDir, '.env') });
 
         // Register the daemon
         await this.instanceRegistry.register({

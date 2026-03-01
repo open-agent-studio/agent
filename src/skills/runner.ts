@@ -98,9 +98,11 @@ export class SkillRunner {
         }
 
         // Get allowed tools for this skill
-        const allowedTools = skill.manifest.tools
-            .map((name) => this.registry.get(name))
-            .filter(Boolean);
+        const allowedTools = skill.manifest.tools.includes('*')
+            ? this.registry.list().map(m => this.registry.get(m.name)).filter(Boolean)
+            : skill.manifest.tools
+                .map((name) => this.registry.get(name))
+                .filter(Boolean);
 
         // Send to LLM with tool definitions
         const toolDefs = allowedTools.map((t) => ({
