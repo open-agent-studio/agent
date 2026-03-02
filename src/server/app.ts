@@ -483,8 +483,72 @@ export function createStudioServer() {
             if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
 
             const scriptDir = join(inst.cwd, '.agent', 'scripts', req.params.name);
-            await rm(scriptDir, { recursive: true, force: true });
+            // Also handle standalone files
+            const standaloneFile = join(inst.cwd, '.agent', 'scripts', req.params.name);
+            try {
+                await rm(scriptDir, { recursive: true, force: true });
+            } catch {
+                // try standalone file patterns
+                for (const ext of ['.sh', '.py', '.js', '.ts']) {
+                    try { await rm(standaloneFile + ext, { force: true }); } catch { /* skip */ }
+                }
+            }
             res.json({ success: true });
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    // Get script content
+    app.get('/api/instances/:id/scripts/:name', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+
+            const configLoader = new ConfigLoader();
+            const config = await configLoader.load();
+            const scriptLoader = new ScriptLoader();
+            await scriptLoader.loadAll(config.scripts?.installPaths ?? ['.agent/scripts'], inst.cwd);
+
+            const script = scriptLoader.get(req.params.name);
+            if (!script) { res.status(404).json({ error: 'Script not found' }); return; }
+
+            const content = await readFile(script.entrypointPath, 'utf-8');
+            res.json({
+                name: script.manifest.name,
+                description: script.manifest.description,
+                entrypoint: script.manifest.entrypoint,
+                path: script.path,
+                entrypointPath: script.entrypointPath,
+                content,
+                manifest: script.manifest,
+            });
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    // Run a script
+    app.post('/api/instances/:id/scripts/:name/run', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+
+            const configLoader = new ConfigLoader();
+            const config = await configLoader.load();
+            const scriptLoader = new ScriptLoader();
+            await scriptLoader.loadAll(config.scripts?.installPaths ?? ['.agent/scripts'], inst.cwd);
+
+            const script = scriptLoader.get(req.params.name);
+            if (!script) { res.status(404).json({ error: 'Script not found' }); return; }
+
+            const { ScriptRunner } = await import('../scripts/runner.js');
+            const runner = new ScriptRunner();
+            const result = await runner.run(script, req.body.args || {}, {
+                projectRoot: inst.cwd,
+            });
+
+            res.json(result);
         } catch (err) {
             res.status(500).json({ error: (err as Error).message });
         }
