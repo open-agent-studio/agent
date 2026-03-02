@@ -1,6 +1,6 @@
 {
     "name": "@praveencs/agent",
-    "version": "0.9.19",
+    "version": "0.9.20",
     "files": [
         "dist",
         "bin",
