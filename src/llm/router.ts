@@ -148,6 +148,17 @@ export class LLMRouter {
         return this.providers.get(name);
     }
 
+    /**
+     * Simple text generation without tools — convenience wrapper
+     */
+    async generateText(prompt: string, options: { temperature?: number } = {}): Promise<string> {
+        const response = await this.chat({
+            messages: [{ role: 'user', content: prompt }],
+            temperature: options.temperature ?? 0.7,
+        });
+        return response.content || '';
+    }
+
     // ─── Private ───
 
     private initProviders(): void {

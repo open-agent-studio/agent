@@ -39,6 +39,8 @@ export class DaemonService {
     private startedAt: Date | null = null;
     private instanceRegistry: InstanceRegistry;
     private instanceId: string;
+    private activeTasks: Map<number, Promise<void>> = new Map();
+    private maxConcurrent = 3;
     private stats = {
         tasksProcessed: 0,
         tasksCompleted: 0,
@@ -189,7 +191,7 @@ export class DaemonService {
     }
 
     /**
-     * Process the goal/task queue
+     * Process the goal/task queue — supports parallel execution
      */
     private async processGoalQueue(): Promise<void> {
         // Step 1: Auto-decompose any goals that have no tasks yet
@@ -198,16 +200,36 @@ export class DaemonService {
             await this.decomposeGoal(goal);
         }
 
-        const task = this.goalStore.getNextTask();
-        if (!task) return;
+        // Step 2: Launch tasks in parallel (up to maxConcurrent)
+        while (this.activeTasks.size < this.maxConcurrent) {
+            const task = this.goalStore.getNextTask();
+            if (!task) break;
 
-        this.stats.tasksProcessed++;
-        await this.log(`🔄 Processing task #${task.id}: "${task.title}"`);
+            // Avoid double-launching
+            if (this.activeTasks.has(task.id)) continue;
 
-        this.goalStore.startTask(task.id);
+            this.stats.tasksProcessed++;
+            await this.log(`🔄 Processing task #${task.id}: "${task.title}"${this.activeTasks.size > 0 ? ` [parallel: ${this.activeTasks.size + 1}]` : ''}`);
+            this.goalStore.startTask(task.id);
 
+            const taskPromise = this.runTask(task);
+            this.activeTasks.set(task.id, taskPromise);
+
+            // Fire-and-forget for parallel, but clean up on completion
+            taskPromise.finally(() => this.activeTasks.delete(task.id));
+        }
+
+        // Wait for at least one task to finish if we're at max capacity
+        if (this.activeTasks.size >= this.maxConcurrent) {
+            await Promise.race(Array.from(this.activeTasks.values()));
+        }
+    }
+
+    /**
+     * Run a single task with output chaining, retry, and re-decomposition
+     */
+    private async runTask(task: Task): Promise<void> {
         try {
-            // Execute the task
             const result = await this.executeTask(task);
 
             this.goalStore.completeTask(task.id, result);
@@ -235,7 +257,7 @@ export class DaemonService {
                 await this.log(`🔁 Recurring task re-created, next run: ${nextRun}`);
             }
 
-            // Check if there are more tasks to process
+            // Trigger more tasks if available
             await this.processGoalQueue();
 
         } catch (err) {
@@ -243,6 +265,50 @@ export class DaemonService {
             this.goalStore.failTask(task.id, error);
             this.stats.tasksFailed++;
             await this.log(`❌ Task #${task.id} failed: ${error}`);
+
+            // Dynamic re-decomposition: if task has exceeded retries, try to re-plan
+            const updatedTask = this.goalStore.getTask(task.id);
+            if (updatedTask && updatedTask.status === 'failed') {
+                await this.handleFailedTask(updatedTask);
+            }
+        }
+    }
+
+    /**
+     * Handle a permanently failed task — attempt re-decomposition
+     */
+    private async handleFailedTask(task: Task): Promise<void> {
+        try {
+            await this.log(`🔁 Attempting re-decomposition for failed task #${task.id}: "${task.title}"`);
+
+            const configLoader = new ConfigLoader(this.workDir);
+            const config = await configLoader.load();
+            const llmRouter = new LLMRouter(config);
+
+            const response = await llmRouter.generateText(
+                `A task failed and needs to be re-planned. Analyze the failure and suggest 1-3 alternative subtasks.
+
+Failed task: "${task.title}"
+Description: ${task.description || 'none'}
+Error: ${task.error}
+
+Respond ONLY with a JSON array of new tasks like: [{"title": "...", "description": "..."}]
+Keep tasks simple and actionable. Address the root cause of the failure.`,
+                { temperature: 0.3 }
+            );
+
+            const jsonMatch = response.match(/\[.*\]/s);
+            if (jsonMatch) {
+                const newTasks = JSON.parse(jsonMatch[0]) as { title: string; description: string }[];
+                for (const nt of newTasks.slice(0, 3)) {
+                    this.goalStore.addTask(task.goal_id, `[retry] ${nt.title}`, {
+                        description: nt.description,
+                    });
+                }
+                await this.log(`   ✅ Re-decomposed into ${newTasks.length} alternative task(s)`);
+            }
+        } catch (err) {
+            await this.log(`   ⚠️ Re-decomposition failed: ${(err as Error).message}`);
         }
     }
 
@@ -325,6 +391,57 @@ export class DaemonService {
 
             const registry = ToolRegistry.getInstance();
             registerCoreTools(registry);
+
+            // Register http.request tool for API calls
+            if (!registry.has('http.request')) {
+                const { z } = await import('zod');
+                registry.register({
+                    name: 'http.request',
+                    category: 'network',
+                    description: 'Make HTTP requests to external APIs. Supports GET, POST, PUT, DELETE, PATCH.',
+                    inputSchema: z.object({
+                        url: z.string().describe('The URL to request'),
+                        method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']).default('GET').describe('HTTP method'),
+                        headers: z.record(z.string()).optional().describe('Request headers'),
+                        body: z.string().optional().describe('Request body for POST/PUT'),
+                    }),
+                    outputSchema: z.object({
+                        status: z.number(),
+                        statusText: z.string(),
+                        headers: z.record(z.string()),
+                        body: z.string(),
+                    }),
+                    permissions: ['network'] as any,
+                    execute: async (args: any) => {
+                        const start = Date.now();
+                        try {
+                            const { url, method = 'GET', headers = {}, body } = args;
+                            const fetchOptions: RequestInit = { method, headers };
+                            if (body && ['POST', 'PUT', 'PATCH'].includes(method)) {
+                                fetchOptions.body = body;
+                            }
+                            const res = await fetch(url, fetchOptions);
+                            const text = await res.text();
+                            return {
+                                success: res.ok,
+                                data: {
+                                    status: res.status,
+                                    statusText: res.statusText,
+                                    headers: Object.fromEntries(res.headers.entries()),
+                                    body: text.slice(0, 5000),
+                                },
+                                durationMs: Date.now() - start,
+                            };
+                        } catch (err) {
+                            return {
+                                success: false,
+                                error: (err as Error).message,
+                                durationMs: Date.now() - start,
+                            };
+                        }
+                    },
+                } as any);
+            }
 
             const policy = new PolicyEngine(config, this.workDir);
             const llmRouter = new LLMRouter(config);
@@ -441,7 +558,7 @@ export class DaemonService {
     }
 
     /**
-     * Build the ephemeral skill prompt for a task
+     * Build the ephemeral skill prompt for a task with output chaining
      */
     private buildTaskPrompt(task: Task): string {
         const lines = [
@@ -455,10 +572,26 @@ export class DaemonService {
             '',
             '## Input Context',
             JSON.stringify(task.input || {}, null, 2),
+        ];
+
+        // Output chaining: inject results from dependency tasks
+        if (task.depends_on.length > 0) {
+            lines.push('', '## Context from previous tasks');
+            for (const depId of task.depends_on) {
+                const depTask = this.goalStore.getTask(depId);
+                if (depTask && depTask.output) {
+                    lines.push(`### Task #${depId}: "${depTask.title}"`);
+                    lines.push(depTask.output.slice(0, 1000));
+                    lines.push('');
+                }
+            }
+        }
+
+        lines.push(
             '',
             '## Instructions',
             '1. Analyze what needs to be done',
-            '2. Use the available tools (fs.read, fs.write, fs.mkdir, cmd.run, etc.) to execute the task',
+            '2. Use the available tools (fs.read, fs.write, fs.mkdir, cmd.run, http.request, etc.) to execute the task',
             '3. If the task requires a script, create it in the proper structure:',
             `   - Create directory: ${this.workDir}/.agent/scripts/<script-name>/`,
             `   - Write manifest to: ${this.workDir}/.agent/scripts/<script-name>/script.yaml`,
@@ -466,15 +599,19 @@ export class DaemonService {
             `   - Write script to: ${this.workDir}/.agent/scripts/<script-name>/run.sh`,
             '   - Make executable: chmod +x on the run.sh',
             '   - Execute it with cmd.run',
-            '4. Report what was accomplished',
+            '4. For HTTP/API calls, use the http.request tool:',
+            '   - http.request({ url: "https://...", method: "GET" })',
+            '   - http.request({ url: "https://...", method: "POST", body: "{...}", headers: {"Content-Type": "application/json"} })',
+            '5. Report what was accomplished',
             '',
             '## Important',
             `- Working directory: ${this.workDir}`,
-            '- You have FULL permission to read/write files and run commands',
+            '- You have FULL permission to read/write files, run commands, and make HTTP requests',
             '- Be specific and actionable — actually create files and run commands',
             '- If creating files, use the fs.write tool with the full file path and content',
             '- NEVER use infinite loops (while true). Always use fixed iterations (for i in {1..N})',
-        ];
+            '- Use http.request for any web API calls, don\'t use curl',
+        );
         return lines.join('\n');
     }
 

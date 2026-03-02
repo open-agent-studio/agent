@@ -555,6 +555,87 @@ export function createStudioServer() {
     });
 
     // ═══════════════════════════════════════════════
+    // GOAL TEMPLATES API
+    // ═══════════════════════════════════════════════
+    app.get('/api/goal-templates', (_req, res) => {
+        res.json({
+            templates: [
+                {
+                    id: 'system-monitor',
+                    icon: '📊',
+                    title: 'System Health Monitor',
+                    description: 'Create a system monitoring dashboard with automated health checks',
+                    goal: {
+                        title: 'Build system health monitoring',
+                        description: 'Create an HTML dashboard showing system hostname, CPU, memory, disk usage, and uptime. Include a script that refreshes the data. Add a README.',
+                    },
+                    tags: ['devops', 'monitoring'],
+                },
+                {
+                    id: 'blog-writer',
+                    icon: '✍️',
+                    title: 'Blog Post Writer',
+                    description: 'Research a topic and write a professional blog post with SEO',
+                    goal: {
+                        title: 'Write a blog post about {topic}',
+                        description: 'Research the topic, write a 1000-word blog post in Markdown format with proper headings, code examples if relevant, and SEO-friendly meta description. Save as blog-post.md.',
+                    },
+                    variables: [{ name: 'topic', label: 'Blog Topic', placeholder: 'e.g. AI agents in 2026' }],
+                    tags: ['content', 'writing'],
+                },
+                {
+                    id: 'apify-actor',
+                    icon: '🕷️',
+                    title: 'Apify Actor Creator',
+                    description: 'Scaffold and configure a new Apify web scraping actor',
+                    goal: {
+                        title: 'Create Apify actor for {website}',
+                        description: 'Create a new Apify actor project that scrapes {website}. Include: actor.json, INPUT_SCHEMA.json, Dockerfile, package.json, src/main.js with Crawlee + Playwright, and README.md. The actor should extract key data points from the website.',
+                    },
+                    variables: [{ name: 'website', label: 'Target Website', placeholder: 'e.g. Amazon product pages' }],
+                    tags: ['scraping', 'apify'],
+                },
+                {
+                    id: 'code-review',
+                    icon: '🔍',
+                    title: 'Code Review & Refactor',
+                    description: 'Analyze a codebase, identify issues, and suggest improvements',
+                    goal: {
+                        title: 'Review and improve codebase',
+                        description: 'Analyze the project codebase: identify code smells, security issues, performance bottlenecks, and missing tests. Create a code-review.md report with findings and recommendations. Implement the top 3 quick-win improvements.',
+                    },
+                    tags: ['code-quality', 'refactoring'],
+                },
+                {
+                    id: 'data-pipeline',
+                    icon: '🔄',
+                    title: 'Data Pipeline',
+                    description: 'Create a data processing pipeline with input, transform, and output',
+                    goal: {
+                        title: 'Build data pipeline for {source}',
+                        description: 'Create a data pipeline that: 1) Fetches data from {source}, 2) Transforms and cleans the data, 3) Outputs results to a JSON file. Include error handling, logging, and a script to run the pipeline.',
+                    },
+                    variables: [{ name: 'source', label: 'Data Source', placeholder: 'e.g. GitHub API repos list' }],
+                    tags: ['data', 'automation'],
+                },
+                {
+                    id: 'recurring-report',
+                    icon: '📅',
+                    title: 'Recurring Report',
+                    description: 'Generate automated reports on a schedule',
+                    goal: {
+                        title: 'Daily {report_type} report',
+                        description: 'Create a recurring task that generates a {report_type} report daily. The report should include current date, key metrics, and be saved as reports/YYYY-MM-DD.md.',
+                    },
+                    variables: [{ name: 'report_type', label: 'Report Type', placeholder: 'e.g. system status, git activity' }],
+                    recurrence: 'daily',
+                    tags: ['reporting', 'recurring'],
+                },
+            ],
+        });
+    });
+
+    // ═══════════════════════════════════════════════
     // PLUGINS API
     // ═══════════════════════════════════════════════
     app.get('/api/instances/:id/plugins', async (req, res) => {
