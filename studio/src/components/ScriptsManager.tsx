@@ -146,8 +146,8 @@ export function ScriptsManager() {
                                 <div key={s.manifest?.name || s.name}
                                     onClick={() => openScript(s.manifest?.name || s.name)}
                                     className={`border rounded-xl p-4 flex flex-col cursor-pointer transition-all group ${isSelected
-                                            ? 'border-pink-500/50 bg-pink-500/5'
-                                            : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]'
+                                        ? 'border-pink-500/50 bg-pink-500/5'
+                                        : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]'
                                         }`}>
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2 min-w-0">
@@ -174,7 +174,7 @@ export function ScriptsManager() {
                                         <span className="text-[10px] font-mono text-neutral-500">
                                             {s.manifest?.entrypoint || s.entrypoint || 'run.sh'}
                                         </span>
-                                        {s.manifest?.tags?.length > 0 && (
+                                        {Array.isArray(s.manifest?.tags) && s.manifest.tags.length > 0 && (
                                             <span className="text-[10px] text-neutral-600">
                                                 {s.manifest.tags.join(', ')}
                                             </span>

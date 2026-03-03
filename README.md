@@ -35,7 +35,8 @@ Agent Runtime is a **fully autonomous AI coding agent** that runs on your machin
 4. **Uses your credentials** securely from an encrypted vault
 5. **Re-plans on failure** — if a task fails, the LLM suggests alternatives
 6. **Remembers everything** — persistent SQLite memory across sessions
-7. **Has a web dashboard** — Agent Studio for visual management
+7. **Tracks costs & notifies** — logs token usage/cost and sends Slack/email alerts
+8. **Has a web dashboard** — Agent Studio for visual management, locally or via remote URL
 
 Think of it as a **junior developer you can assign tasks to** and check on later.
 
@@ -103,7 +104,7 @@ You give a goal
 💾 Everything stored in memory for future context
 ```
 
-### Available Tools
+### Tool Ecosystem
 
 The agent has access to these tools when executing tasks:
 
@@ -117,6 +118,8 @@ The agent has access to these tools when executing tasks:
 | `secrets.get` / `secrets.list` | Access encrypted credentials |
 | `script.run` | Execute project scripts by name |
 | `command.execute` | Run pre-defined command workflows |
+| `notify.send` | Send alerts via webhook, email, or log |
+| `cost.summary` | Get token usage and cost tracking |
 
 ---
 
@@ -208,6 +211,9 @@ A full web-based management console for your agent:
 ```bash
 agent studio
 # → Agent Studio running at http://localhost:3333
+
+agent studio --remote
+# → Starts a secure tunnel and prints a QR code in terminal for mobile access!
 ```
 
 ### Pages
@@ -219,11 +225,13 @@ agent studio
 | **Goals & Tasks** | Create goals, track progress, view task status |
 | **Templates** | Pre-built goal templates (blog writer, data pipeline, etc.) |
 | **Credentials** | Encrypted vault — add/delete API keys and tokens |
+| **Live Stream** | Real-time WebSocket streaming of task execution output |
 | **Skills** | Installed skills with success metrics |
 | **Commands** | Lightweight automation templates |
 | **Scripts** | Project scripts with execution and output viewer |
 | **Plugins** | Installed plugin bundles |
 | **Daemon** | Start/stop daemon, view logs, health status |
+| **Costs** | LLM token usage, spend tracking by model and day |
 | **Memory** | Search and browse persistent agent memory |
 
 ### Goal Templates
@@ -511,9 +519,14 @@ your-project/
 
 ---
 
-## 🆕 What's New in v0.9.25
+## 🆕 What's New in v0.9.27
 
-- **⚡ Parallel Task Execution** — Up to 3 tasks run simultaneously
+- **🚀 Remote Studio Access** — `agent studio --remote` generates a secure tunnel URL + QR code for mobile access
+- **📡 Live Task Streaming** — Real-time event timeline of daemon task execution (`task:start`/`complete`/`failed`)
+- **🔑 Interactive Credential Capture** — When the daemon needs a secret mid-task, a modal pops up in Studio, waiting for you to provide it before continuing
+- **🔔 Notifications Plugin** — Auto-notifies on goal completion/failure via Slack, Discord webhook, or SMTP Email
+- **💰 Cost Tracker Plugin** — Automatically tracks token usage + cost split by model, with a complete dashboard inside Agent Studio
+- **⚡ Parallel Task Execution** — Up to 3 independent tasks run simultaneously
 - **🔗 Task Output Chaining** — Downstream tasks receive upstream results
 - **🔁 Dynamic Re-decomposition** — Failed tasks trigger LLM re-planning
 - **🔑 Credential Vault** — Encrypted secret storage with Studio UI

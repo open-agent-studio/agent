@@ -523,11 +523,13 @@ agent studio
 | **Goals & Tasks** | Create goals, view decomposition, track progress with status badges |
 | **Templates** | 6 pre-built goal templates with variable substitution |
 | **Credentials** | Encrypted vault manager — add/delete/mask secrets |
+| **Live Stream** | Real-time WebSocket streaming of tasks (`task:start`/`complete`) |
 | **Skills** | CRUD for skill definitions, view success rates |
 | **Commands** | View and manage command templates |
 | **Scripts** | View script contents, run scripts, see output |
 | **Plugins** | View installed plugins and their capabilities |
 | **Daemon** | Start/stop daemon, view logs, check health |
+| **Costs** | Monitor LLM token usage and spend per model |
 | **Memory** | Search, add, and browse persistent agent memories |
 
 ---
@@ -618,6 +620,14 @@ Configure in `.agent/config.json`:
 | Tool | Arguments | Description |
 |------|-----------|-------------|
 | `http.request` | `{ url, method?, headers?, body? }` | HTTP request (GET/POST/PUT/DELETE) |
+| `notify.send` | `{ channel, title, message, ... }` | Send alerts via Slack/Discord, Email, or log |
+
+### Cost & Tokens
+
+| Tool | Arguments | Description |
+|------|-----------|-------------|
+| `cost.summary` | — | Get LLM token usage and spend summary |
+| `cost.recent` | `{ limit? }` | View recent API calls and their costs |
 
 ### Credentials
 
@@ -672,6 +682,14 @@ Agent Studio exposes a REST API at `http://localhost:3333`:
 | GET | `/api/instances/:id/commands` | List commands |
 | GET | `/api/instances/:id/scripts` | List scripts |
 | GET | `/api/instances/:id/plugins` | List plugins |
+
+### Cost Tracking & Notifications
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/instances/:id/costs/summary` | Get token usage and cost breakdown |
+| GET | `/api/instances/:id/costs/recent` | Recent LLM API calls |
+| GET | `/api/instances/:id/notifications` | Recent notification logs |
 
 ### Daemon
 

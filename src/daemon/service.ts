@@ -303,6 +303,16 @@ export class DaemonService extends EventEmitter {
             this.emit('task:complete', { taskId: task.id, title: task.title, output: result.slice(0, 500) });
             this.notificationService.onTaskComplete(task.title, result).catch(() => { });
 
+            // Check if the parent goal just completed
+            const goalAfterComplete = this.goalStore.getGoal(task.goal_id);
+            if (goalAfterComplete && goalAfterComplete.status === 'completed') {
+                const allTasks = this.goalStore.listTasks(task.goal_id);
+                const taskCount = allTasks.filter(t => t.status === 'completed').length;
+                await this.log(`🎉 Goal "${goalAfterComplete.title}" completed — ${taskCount} tasks done`);
+                this.emit('goal:complete', { goalId: task.goal_id, title: goalAfterComplete.title, taskCount });
+                this.notificationService.onGoalComplete(goalAfterComplete.title, taskCount).catch(() => { });
+            }
+
             // Auto-save completion as a memory
             this.memoryStore.save(
                 `Completed task: "${task.title}" — ${result.slice(0, 200)}`,
@@ -338,6 +348,19 @@ export class DaemonService extends EventEmitter {
             const updatedTask = this.goalStore.getTask(task.id);
             if (updatedTask && updatedTask.status === 'failed') {
                 await this.handleFailedTask(updatedTask);
+            }
+
+            // Check if the parent goal is now effectively failed (all tasks failed or cancelled)
+            const goalAfterFail = this.goalStore.getGoal(task.goal_id);
+            if (goalAfterFail && goalAfterFail.status === 'active') {
+                const allTasks = this.goalStore.listTasks(task.goal_id);
+                const allDone = allTasks.every(t => t.status === 'failed' || t.status === 'cancelled');
+                if (allDone && allTasks.length > 0) {
+                    this.goalStore.updateGoalStatus(task.goal_id, 'failed');
+                    await this.log(`💀 Goal "${goalAfterFail.title}" failed — all tasks exhausted`);
+                    this.emit('goal:failed', { goalId: task.goal_id, title: goalAfterFail.title, error });
+                    this.notificationService.onGoalFailed(goalAfterFail.title, error).catch(() => { });
+                }
             }
         }
     }

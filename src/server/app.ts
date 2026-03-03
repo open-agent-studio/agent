@@ -3,7 +3,8 @@ import cors from 'cors';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { InstanceRegistry } from '../instance/registry.js';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { MemoryStore } from '../memory/store.js';
 import { GoalStore } from '../goals/store.js';
 import { ConfigLoader } from '../config/loader.js';
@@ -249,7 +250,7 @@ export function createStudioServer() {
             await scriptLoader.loadAll(config.scripts?.installPaths ?? ['.agent/scripts'], inst.cwd);
             await hookRegistry.loadProjectHooks(inst.cwd);
 
-            const loadedPlugins = await pluginLoader.loadAll(config.plugins.installPaths, inst.cwd, skillLoader, cmdLoader, hookRegistry, scriptLoader);
+            const loadedPlugins = await pluginLoader.loadAll(config.plugins?.installPaths ?? ['.agent/plugins'], inst.cwd, skillLoader, cmdLoader, hookRegistry, scriptLoader);
 
             res.json({
                 skills: skillLoader.list(),
@@ -824,7 +825,15 @@ export function createStudioServer() {
             try {
                 const raw = await readFile(logPath, 'utf-8');
                 const lines = raw.trim().split('\n').filter(Boolean).slice(-100);
-                res.json({ notifications: lines });
+                // Parse: [2026-03-03T10:00:00.000Z] [SUCCESS] Goal Completed: "Deploy app" — 5 tasks done
+                const notifications = lines.map(line => {
+                    const match = line.match(/^\[(.+?)\]\s+\[(\w+)\]\s+(.+?):\s+(.+)$/);
+                    if (match) {
+                        return { timestamp: match[1], level: match[2].toLowerCase(), title: match[3], message: match[4] };
+                    }
+                    return { timestamp: new Date().toISOString(), level: 'info', title: 'Notification', message: line };
+                }).reverse();
+                res.json({ notifications });
             } catch {
                 res.json({ notifications: [] });
             }
@@ -882,7 +891,11 @@ export function createStudioServer() {
     // ═══════════════════════════════════════════════
     // SERVE FRONTEND
     // ═══════════════════════════════════════════════
-    const reactAppPath = resolve(process.cwd(), 'studio/dist');
+    // Resolve relative to the package root (dist/src/server/app.js -> ../../.. -> package root)
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const pkgRoot = resolve(__dirname, '..', '..', '..');
+    const reactAppPath = resolve(pkgRoot, 'studio', 'dist');
     app.use(express.static(reactAppPath));
     app.use((_req, res) => { res.sendFile(resolve(reactAppPath, 'index.html')); });
 

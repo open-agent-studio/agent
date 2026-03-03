@@ -65,8 +65,12 @@ export function Capabilities() {
                 </h2>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {data.scripts?.map((s, i) => (
-                        <div key={i} className="border border-white/10 p-4 rounded-xl flex items-center gap-3 bg-white/[0.01]">
-                            <span className="font-mono text-sm text-pink-200">{s.name}</span>
+                        <div key={i} className="border border-white/10 p-4 rounded-xl flex flex-col gap-2 bg-white/[0.01] hover:border-white/20 transition-all">
+                            <span className="font-mono text-sm text-pink-200">{s.manifest?.name || s.name || 'unnamed'}</span>
+                            {(s.manifest?.description || s.description) && (
+                                <span className="text-xs text-neutral-500 line-clamp-2">{s.manifest?.description || s.description}</span>
+                            )}
+                            <span className="text-[10px] font-mono text-neutral-600">{s.manifest?.entrypoint || s.entrypoint || ''}</span>
                         </div>
                     ))}
                 </div>
