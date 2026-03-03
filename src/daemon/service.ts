@@ -19,6 +19,15 @@ import { registerCoreTools } from '../cli/commands/init.js';
 import { GoalDecomposer } from '../goals/decomposer.js';
 import type { LoadedSkill } from '../skills/types.js';
 
+// Phase 3: Full capability integration
+import { CredentialStore } from '../credentials/store.js';
+import { registerCredentialTools } from '../credentials/tools.js';
+import { registerScriptTool, registerCommandTool } from './capability-tools.js';
+import { CommandLoader } from '../commands/loader.js';
+import { ScriptLoader } from '../scripts/loader.js';
+import { PluginLoader } from '../plugins/loader.js';
+import { HookRegistry } from '../hooks/registry.js';
+
 /**
  * Daemon Service — The autonomous agent heartbeat
  *
@@ -34,6 +43,7 @@ export class DaemonService {
     private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     private memoryStore: MemoryStore;
     private goalStore: GoalStore;
+    private credentialStore: CredentialStore;
     private logPath: string;
     private running = false;
     private startedAt: Date | null = null;
@@ -52,6 +62,7 @@ export class DaemonService {
     constructor(private workDir: string = process.cwd()) {
         this.memoryStore = MemoryStore.open(workDir);
         this.goalStore = new GoalStore(this.memoryStore);
+        this.credentialStore = new CredentialStore(workDir);
         this.logPath = path.join(getAgentDir(), 'daemon.log');
         this.instanceRegistry = new InstanceRegistry();
         this.instanceId = `daemon-${Date.now()}`;
@@ -215,8 +226,12 @@ export class DaemonService {
             const taskPromise = this.runTask(task);
             this.activeTasks.set(task.id, taskPromise);
 
-            // Fire-and-forget for parallel, but clean up on completion
-            taskPromise.finally(() => this.activeTasks.delete(task.id));
+            // Fire-and-forget for parallel, but clean up on completion and re-check queue
+            taskPromise.finally(() => {
+                this.activeTasks.delete(task.id);
+                // Re-check queue: dependent tasks may now be unblocked
+                if (this.running) this.processGoalQueue().catch(() => { });
+            });
         }
 
         // Wait for at least one task to finish if we're at max capacity
@@ -392,7 +407,7 @@ Keep tasks simple and actionable. Address the root cause of the failure.`,
             const registry = ToolRegistry.getInstance();
             registerCoreTools(registry);
 
-            // Register http.request tool for API calls
+            // ── Phase 3: Register http.request tool ──
             if (!registry.has('http.request')) {
                 const { z } = await import('zod');
                 registry.register({
@@ -443,11 +458,34 @@ Keep tasks simple and actionable. Address the root cause of the failure.`,
                 } as any);
             }
 
+            // ── Phase 3: Load full project capabilities ──
             const policy = new PolicyEngine(config, this.workDir);
             const llmRouter = new LLMRouter(config);
             const skillLoader = new SkillLoader(config);
-
             await skillLoader.loadAll();
+
+            // Load commands from .agent/commands/
+            const commandLoader = new CommandLoader();
+            await commandLoader.loadProjectCommands(this.workDir);
+
+            // Load scripts from .agent/scripts/
+            const scriptLoader = new ScriptLoader();
+            await scriptLoader.loadAll(config.scripts?.installPaths ?? ['.agent/scripts'], this.workDir);
+
+            // Load plugins from .agent/plugins/ (brings in additional skills, commands, hooks, scripts)
+            const hookRegistry = new HookRegistry();
+            const pluginLoader = new PluginLoader();
+            await pluginLoader.loadAll(
+                config.plugins?.installPaths ?? ['.agent/plugins'],
+                this.workDir, skillLoader, commandLoader, hookRegistry, scriptLoader
+            );
+
+            // ── Register capability tools ──
+            registerCredentialTools(registry, this.credentialStore);
+            registerScriptTool(registry, scriptLoader, this.workDir);
+            registerCommandTool(registry, commandLoader);
+
+            await this.log(`   📦 Loaded: ${skillLoader.size ?? 0} skills, ${commandLoader.size} commands, ${scriptLoader.list().length} scripts, ${pluginLoader.size} plugins, ${(await this.credentialStore.list()).length} credentials`);
 
             let loadedSkill: LoadedSkill | undefined;
 
@@ -468,7 +506,7 @@ Keep tasks simple and actionable. Address the root cause of the failure.`,
                         permissions: { required: ['*'] as any },
                         entrypoint: 'prompt.md'
                     },
-                    promptContent: this.buildTaskPrompt(task)
+                    promptContent: await this.buildTaskPrompt(task, scriptLoader, commandLoader, pluginLoader)
                 };
             }
 
@@ -558,9 +596,14 @@ Keep tasks simple and actionable. Address the root cause of the failure.`,
     }
 
     /**
-     * Build the ephemeral skill prompt for a task with output chaining
+     * Build the ephemeral skill prompt for a task with output chaining + capability context
      */
-    private buildTaskPrompt(task: Task): string {
+    private async buildTaskPrompt(
+        task: Task,
+        scriptLoader?: ScriptLoader,
+        commandLoader?: CommandLoader,
+        pluginLoader?: PluginLoader
+    ): Promise<string> {
         const lines = [
             '# Task Execution',
             '',
@@ -587,30 +630,79 @@ Keep tasks simple and actionable. Address the root cause of the failure.`,
             }
         }
 
+        // Capability context: tell the LLM what's already available
+        lines.push('', '## Available Capabilities');
+
+        // Credentials
+        const credKeys = await this.credentialStore.list();
+        if (credKeys.length > 0) {
+            lines.push('### 🔑 Credentials (use secrets.get / secrets.list)');
+            lines.push(`Available keys: ${credKeys.join(', ')}`);
+            lines.push('Use secrets.get({ key: "KEY_NAME" }) to retrieve a value.');
+            lines.push('If a key you need is missing, call secrets.get with a reason — the user will be prompted.');
+            lines.push('');
+        } else {
+            lines.push('### 🔑 Credentials');
+            lines.push('No stored credentials. Use secrets.get({ key: "KEY_NAME", reason: "why" }) to request one from the user.');
+            lines.push('');
+        }
+
+        // Scripts
+        if (scriptLoader) {
+            const scripts = scriptLoader.list();
+            if (scripts.length > 0) {
+                lines.push('### 📜 Scripts (use script.run)');
+                for (const s of scripts) {
+                    lines.push(`- ${s.manifest.name}: "${s.manifest.description}"`);
+                }
+                lines.push('Use script.run({ name: "script-name" }) to execute a script.');
+                lines.push('');
+            }
+        }
+
+        // Commands
+        if (commandLoader) {
+            const commands = commandLoader.list();
+            if (commands.length > 0) {
+                lines.push('### 💻 Commands (use command.execute)');
+                for (const c of commands) {
+                    lines.push(`- ${c.name}: "${c.description}"`);
+                }
+                lines.push('Use command.execute({ name: "command-name" }) to run a command.');
+                lines.push('');
+            }
+        }
+
+        // Plugins
+        if (pluginLoader && pluginLoader.size > 0) {
+            lines.push('### 🔌 Plugins');
+            for (const p of pluginLoader.list()) {
+                lines.push(`- ${p.manifest.name}: ${p.manifest.description || 'No description'} (${p.skillsCount} skills, ${p.commandsCount} commands, ${p.scriptsCount} scripts)`);
+            }
+            lines.push('');
+        }
+
         lines.push(
             '',
             '## Instructions',
             '1. Analyze what needs to be done',
-            '2. Use the available tools (fs.read, fs.write, fs.mkdir, cmd.run, http.request, etc.) to execute the task',
-            '3. If the task requires a script, create it in the proper structure:',
+            '2. **Check if an existing script, command, or skill can do this** before writing new code',
+            '3. Use available tools: fs.read, fs.write, cmd.run, http.request, secrets.get, script.run, command.execute',
+            '4. For API calls needing auth, use secrets.get to retrieve the API key first',
+            '5. If the task requires a new script, create it in the proper structure:',
             `   - Create directory: ${this.workDir}/.agent/scripts/<script-name>/`,
             `   - Write manifest to: ${this.workDir}/.agent/scripts/<script-name>/script.yaml`,
-            '     Contents: name: <script-name>, description: <what it does>, entrypoint: run.sh',
             `   - Write script to: ${this.workDir}/.agent/scripts/<script-name>/run.sh`,
-            '   - Make executable: chmod +x on the run.sh',
-            '   - Execute it with cmd.run',
-            '4. For HTTP/API calls, use the http.request tool:',
-            '   - http.request({ url: "https://...", method: "GET" })',
-            '   - http.request({ url: "https://...", method: "POST", body: "{...}", headers: {"Content-Type": "application/json"} })',
-            '5. Report what was accomplished',
+            '   - Make executable and execute it',
+            '6. Report what was accomplished',
             '',
             '## Important',
             `- Working directory: ${this.workDir}`,
-            '- You have FULL permission to read/write files, run commands, and make HTTP requests',
+            '- You have FULL permission to read/write files, run commands, make HTTP requests, and access credentials',
             '- Be specific and actionable — actually create files and run commands',
-            '- If creating files, use the fs.write tool with the full file path and content',
-            '- NEVER use infinite loops (while true). Always use fixed iterations (for i in {1..N})',
-            '- Use http.request for any web API calls, don\'t use curl',
+            '- NEVER hardcode API keys — always use secrets.get',
+            '- NEVER use infinite loops (while true). Always use fixed iterations',
+            '- Prefer existing scripts/commands over creating new ones',
         );
         return lines.join('\n');
     }
