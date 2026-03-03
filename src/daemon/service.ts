@@ -485,7 +485,7 @@ Keep tasks simple and actionable. Address the root cause of the failure.`,
             registerScriptTool(registry, scriptLoader, this.workDir);
             registerCommandTool(registry, commandLoader);
 
-            await this.log(`   📦 Loaded: ${skillLoader.size ?? 0} skills, ${commandLoader.size} commands, ${scriptLoader.list().length} scripts, ${pluginLoader.size} plugins, ${(await this.credentialStore.list()).length} credentials`);
+            await this.log(`   📦 Loaded: ${skillLoader.list?.()?.length ?? 0} skills, ${commandLoader.size} commands, ${scriptLoader.list().length} scripts, ${pluginLoader.size} plugins, ${(await this.credentialStore.list()).length} credentials`);
 
             let loadedSkill: LoadedSkill | undefined;
 

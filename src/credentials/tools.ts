@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolResult, ExecutionContext } from '../tools/types.js';
+import type { ToolResult, ExecutionContext } from '../tools/types.js';
 import type { ToolRegistry } from '../tools/registry.js';
 import type { CredentialStore } from './store.js';
 import { z } from 'zod';
