@@ -1,4 +1,5 @@
 import { Cron } from 'croner';
+import { EventEmitter } from 'node:events';
 import { watch } from 'chokidar';
 import path from 'node:path';
 import { appendFile, mkdir } from 'node:fs/promises';
@@ -37,7 +38,7 @@ import { HookRegistry } from '../hooks/registry.js';
  * - Runs cron-scheduled tasks
  * - Logs all activity
  */
-export class DaemonService {
+export class DaemonService extends EventEmitter {
     private cronJobs: Cron[] = [];
     private fileWatchers: ReturnType<typeof watch>[] = [];
     private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
@@ -51,6 +52,7 @@ export class DaemonService {
     private instanceId: string;
     private activeTasks: Map<number, Promise<void>> = new Map();
     private maxConcurrent = 3;
+    private pendingCredentials: Map<string, { resolve: (v: string | null) => void; timeout: ReturnType<typeof setTimeout> }> = new Map();
     private stats = {
         tasksProcessed: 0,
         tasksCompleted: 0,
@@ -60,12 +62,51 @@ export class DaemonService {
     };
 
     constructor(private workDir: string = process.cwd()) {
+        super();
         this.memoryStore = MemoryStore.open(workDir);
         this.goalStore = new GoalStore(this.memoryStore);
         this.credentialStore = new CredentialStore(workDir);
         this.logPath = path.join(getAgentDir(), 'daemon.log');
         this.instanceRegistry = new InstanceRegistry();
         this.instanceId = `daemon-${Date.now()}`;
+
+        // Wire credential capture: when CredentialStore can't find a key → emit event
+        this.credentialStore.onCredentialRequired = async (key: string, reason: string) => {
+            return this.requestCredential(key, reason);
+        };
+    }
+
+    /**
+     * Request a credential interactively via WebSocket/Studio
+     */
+    private requestCredential(key: string, reason: string): Promise<string | null> {
+        const requestId = `cred-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+                this.pendingCredentials.delete(requestId);
+                resolve(null);
+            }, 5 * 60 * 1000); // 5 minute timeout
+
+            this.pendingCredentials.set(requestId, { resolve, timeout });
+            this.emit('credential:required', { instanceId: this.instanceId, key, reason, requestId });
+            this.log(`🔑 Credential required: "${key}" — waiting for user input via Studio...`).catch(() => { });
+        });
+    }
+
+    /**
+     * Provide a credential value (called from Studio WebSocket)
+     */
+    provideCredential(requestId: string, key: string, value: string): void {
+        const pending = this.pendingCredentials.get(requestId);
+        if (pending) {
+            clearTimeout(pending.timeout);
+            this.pendingCredentials.delete(requestId);
+            // Store in vault + resolve the waiting task
+            this.credentialStore.set(key, value).then(() => {
+                pending.resolve(value);
+                this.log(`🔑 Credential "${key}" received and stored in vault`).catch(() => { });
+            });
+        }
     }
 
     /**
@@ -245,11 +286,13 @@ export class DaemonService {
      */
     private async runTask(task: Task): Promise<void> {
         try {
+            this.emit('task:start', { taskId: task.id, title: task.title, goalId: task.goal_id });
             const result = await this.executeTask(task);
 
             this.goalStore.completeTask(task.id, result);
             this.stats.tasksCompleted++;
             await this.log(`✅ Task #${task.id} completed: ${result.slice(0, 100)}`);
+            this.emit('task:complete', { taskId: task.id, title: task.title, output: result.slice(0, 500) });
 
             // Auto-save completion as a memory
             this.memoryStore.save(
@@ -280,6 +323,7 @@ export class DaemonService {
             this.goalStore.failTask(task.id, error);
             this.stats.tasksFailed++;
             await this.log(`❌ Task #${task.id} failed: ${error}`);
+            this.emit('task:failed', { taskId: task.id, title: task.title, error: error.slice(0, 500) });
 
             // Dynamic re-decomposition: if task has exceeded retries, try to re-plan
             const updatedTask = this.goalStore.getTask(task.id);

@@ -15,6 +15,8 @@ import { DaemonPanel } from './components/DaemonPanel';
 import { MemoryExplorer } from './components/MemoryExplorer';
 import { GoalTemplates } from './components/GoalTemplates';
 import CredentialsManager from './components/CredentialsManager';
+import TaskStreaming from './components/TaskStreaming';
+import CredentialCapture from './components/CredentialCapture';
 
 export default function App() {
   return (
@@ -157,6 +159,7 @@ const sidebarItems = [
   { icon: Target, label: 'Goals & Tasks', path: 'goals' },
   { icon: Sparkles, label: 'Templates', path: 'templates' },
   { icon: KeyRound, label: 'Credentials', path: 'credentials' },
+  { icon: Activity, label: 'Live Stream', path: 'stream' },
   { icon: Wrench, label: 'Skills', path: 'skills' },
   { icon: Code, label: 'Commands', path: 'commands' },
   { icon: FileCode, label: 'Scripts', path: 'scripts' },
@@ -205,6 +208,7 @@ function InstanceView() {
           <Route path="goals" element={<GoalsPanel />} />
           <Route path="templates" element={<GoalTemplates />} />
           <Route path="credentials" element={<CredentialsManager />} />
+          <Route path="stream" element={<TaskStreaming />} />
           <Route path="skills" element={<SkillsManager />} />
           <Route path="commands" element={<CommandsManager />} />
           <Route path="scripts" element={<ScriptsManager />} />
@@ -212,6 +216,8 @@ function InstanceView() {
           <Route path="daemon" element={<DaemonPanel />} />
           <Route path="memory" element={<MemoryExplorer />} />
         </Routes>
+        {/* Global credential capture modal */}
+        <CredentialCapture />
       </div>
     </div>
   );
