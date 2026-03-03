@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Terminal, Activity, Workflow, Server, ArrowLeft, Zap, Target,
-  Wrench, Code, FileCode, Package, Brain, Sparkles
+  Wrench, Code, FileCode, Package, Brain, Sparkles, KeyRound
 } from 'lucide-react';
 import { Terminal as TerminalComponent } from './components/Terminal';
 import { Capabilities } from './components/Capabilities';
@@ -14,6 +14,7 @@ import { PluginsManager } from './components/PluginsManager';
 import { DaemonPanel } from './components/DaemonPanel';
 import { MemoryExplorer } from './components/MemoryExplorer';
 import { GoalTemplates } from './components/GoalTemplates';
+import CredentialsManager from './components/CredentialsManager';
 
 export default function App() {
   return (
@@ -155,6 +156,7 @@ const sidebarItems = [
   { icon: Zap, label: 'Capabilities', path: 'capabilities' },
   { icon: Target, label: 'Goals & Tasks', path: 'goals' },
   { icon: Sparkles, label: 'Templates', path: 'templates' },
+  { icon: KeyRound, label: 'Credentials', path: 'credentials' },
   { icon: Wrench, label: 'Skills', path: 'skills' },
   { icon: Code, label: 'Commands', path: 'commands' },
   { icon: FileCode, label: 'Scripts', path: 'scripts' },
@@ -202,6 +204,7 @@ function InstanceView() {
           <Route path="capabilities" element={<Capabilities />} />
           <Route path="goals" element={<GoalsPanel />} />
           <Route path="templates" element={<GoalTemplates />} />
+          <Route path="credentials" element={<CredentialsManager />} />
           <Route path="skills" element={<SkillsManager />} />
           <Route path="commands" element={<CommandsManager />} />
           <Route path="scripts" element={<ScriptsManager />} />

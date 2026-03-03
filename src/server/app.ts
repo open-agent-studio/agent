@@ -734,6 +734,54 @@ export function createStudioServer() {
     });
 
     // ═══════════════════════════════════════════════
+    // CREDENTIALS / VAULT API
+    // ═══════════════════════════════════════════════
+    app.get('/api/instances/:id/credentials', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+
+            const { CredentialStore } = await import('../credentials/store.js');
+            const store = new CredentialStore(inst.cwd);
+            const keys = await store.list();
+            res.json({ keys });
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    app.post('/api/instances/:id/credentials', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+
+            const { key, value } = req.body;
+            if (!key || !value) { res.status(400).json({ error: 'key and value required' }); return; }
+
+            const { CredentialStore } = await import('../credentials/store.js');
+            const store = new CredentialStore(inst.cwd);
+            await store.set(key, value);
+            res.json({ success: true, key });
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    app.delete('/api/instances/:id/credentials/:key', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+
+            const { CredentialStore } = await import('../credentials/store.js');
+            const store = new CredentialStore(inst.cwd);
+            await store.delete(req.params.key);
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    // ═══════════════════════════════════════════════
     // SOCKET.IO FOR LIVE LOGS & APPROVAL RELAY
     // ═══════════════════════════════════════════════
     io.on('connection', (socket) => {
@@ -758,6 +806,20 @@ export function createStudioServer() {
 
         socket.on('agent:approval:response', (data: { instanceId: string, tool: string, approved: boolean }) => {
             socket.to(data.instanceId).emit(`agent:approval:response:${data.tool}`, data);
+        });
+
+        // Credential capture flow
+        socket.on('credential:required', (data: { instanceId: string, key: string, reason: string, requestId: string }) => {
+            socket.to(data.instanceId).emit('credential:required', data);
+        });
+
+        socket.on('credential:provide', (data: { instanceId: string, key: string, value: string, requestId: string }) => {
+            socket.to(data.instanceId).emit('credential:provide', data);
+        });
+
+        // Live task streaming
+        socket.on('task:progress', (data: { instanceId: string, taskId: number, event: string, data: any }) => {
+            socket.to(data.instanceId).emit('task:progress', data);
         });
 
         socket.on('disconnect', () => {
