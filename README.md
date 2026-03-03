@@ -1,597 +1,538 @@
 # 🤖 Agent Runtime
 
-> An autonomous, goal-oriented AI agent runtime with an interactive CLI, plugin ecosystem, and self-improvement capabilities.
+> **Your autonomous AI employee.** Give it a goal, walk away. It decomposes, executes, scripts, and learns — all by itself.
 
 [![npm version](https://img.shields.io/npm/v/@praveencs/agent)](https://www.npmjs.com/package/@praveencs/agent)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ```
+$ npm install -g @praveencs/agent
+$ agent init
 $ agent
 
-  ╭────────────────────────────────────────────────╮
-  │  🤖 Agent Runtime v0.9.8                       │
-  │    Project: my-app                              │
-  │    Model: gpt-4o │ 3 skills │ 2 commands        │
-  ╰────────────────────────────────────────────────╯
+  🤖 Agent Runtime v0.9.25
+  > Build a system health dashboard with monitoring scripts
 
-  Type a goal, a /command, or /help for help.
+  🧠 Decomposing into 5 subtasks...
+  ⚡ [1/5] Create project structure ✓
+  ⚡ [2/5] Gather system data ✓        ← created .agent/scripts/system-info/
+  ⚡ [3/5] Build HTML dashboard ✓      ← created dashboard.html + dashboard.css
+  ⚡ [4/5] Create update script ✓      ← created .agent/scripts/update-dashboard/
+  ⚡ [5/5] Write README ✓
 
-  > Refactor the auth module to use JWT
-  ⠋ Thinking...
-  ⚡ fs.read(src/auth/handler.ts) ✓
-  ⚡ fs.write(src/auth/jwt.ts) ✓
-  ⚡ cmd.run(npm test) ✓
-
-  ✓ Done (12.3s)
-
-  > /deploy-staging
-  Running command: deploy-staging...
+  ✓ Goal completed (42.1s) — 5/5 tasks done
 ```
 
 ---
 
-## ✨ Features
+## What Is This?
 
-| Category | Capabilities |
-|----------|-------------|
-| **🤖 Interactive CLI** | Conversational REPL with multi-turn context, slash commands, and tab completion |
-| **🧠 Goal Decomposition** | LLM-powered breakdown of complex objectives into dependency-aware task graphs |
-| **⚡ Autonomous Execution** | Background daemon processes tasks with retries, rollback, and verification |
-| **🛠️ Extensible Skills** | Markdown-based skill definitions—install from a hub or write your own |
-| **⚡ Lightweight Commands** | Quick goal templates as markdown files—no boilerplate needed |
-| **📜 Scripts System** | Repeatable local tasks defined in `script.yaml` for direct execution |
-| **🪝 Lifecycle Hooks** | Intercept execution at 10 event points (before:tool, after:plan, etc.) |
-| **🔌 Plugin System** | Bundle skills, commands, scripts, and hooks into distributable packages |
-| **🔧 Multi-CLI Orchestration** | Delegate tasks to Cursor, Codex, Gemini, or Claude CLIs |
-| **💾 Persistent Memory** | SQLite + FTS5 semantic memory across sessions |
-| **❤️ Self-Improvement** | Monitors skill metrics and auto-patches failing skills |
-| **📊 Reporting** | Daily standup reports and AI-generated executive summaries |
-| **🔒 Policy Engine** | Permission-gated tool execution with human-in-the-loop approval |
+Agent Runtime is a **fully autonomous AI coding agent** that runs on your machine. Unlike chat-based tools where you prompt-and-wait, this agent:
+
+1. **Breaks down complex goals** into a dependency-aware task graph
+2. **Runs tasks in parallel** (up to 3 at once) with automatic retries
+3. **Creates scripts and files** autonomously — shell, Python, Node.js
+4. **Uses your credentials** securely from an encrypted vault
+5. **Re-plans on failure** — if a task fails, the LLM suggests alternatives
+6. **Remembers everything** — persistent SQLite memory across sessions
+7. **Has a web dashboard** — Agent Studio for visual management
+
+Think of it as a **junior developer you can assign tasks to** and check on later.
 
 ---
 
-## 📦 Installation
+## 🚀 Quick Start (5 minutes)
+
+### 1. Install
 
 ```bash
 npm install -g @praveencs/agent
 ```
 
-### Quick Start
+### 2. Initialize a project
 
 ```bash
-# Initialize project configuration
+cd your-project
 agent init
-
-# Launch interactive mode (recommended)
-agent
-
-# Or run a one-off goal
-agent run "Add input validation to the signup form"
 ```
 
-### Configuration
+This creates a `.agent/` directory with configuration, skills, commands, and scripts.
 
-After `agent init`, a `.agent/` directory is created in your project with configuration, skills, commands, and hooks. Set your LLM provider API keys:
+### 3. Configure your LLM
 
 ```bash
-# Set via environment variables
+# Set your preferred LLM provider
 export OPENAI_API_KEY=sk-...
+# OR
 export ANTHROPIC_API_KEY=sk-ant-...
-
-# Or configure directly
-agent config --init
 ```
 
----
+The agent supports **OpenAI**, **Anthropic**, **Azure OpenAI**, and **Ollama** (local) with automatic fallback.
 
-## 📖 Usage Guide
-
-### 1. Interactive Mode (Recommended)
-
-Type `agent` with no arguments to enter the **Interactive REPL**:
+### 4. Start using it
 
 ```bash
+# Interactive mode (recommended)
 agent
+
+# Or one-shot command
+agent run "Add input validation to the signup form"
+
+# Or start the background daemon
+agent daemon start
 ```
-
-You get a bordered welcome banner showing your project, model, and loaded extensions. Then just type naturally:
-
-```
-  > Add rate limiting to the /api/auth endpoint
-  > Now write tests for it
-  > /deploy-staging
-```
-
-The agent **remembers context** across turns—no need to repeat yourself.
-
-#### Slash Commands
-
-| Command | Action |
-|---------|--------|
-| `/help` | Show all available commands |
-| `/skills` | List installed skills with status |
-| `/commands` | List available lightweight commands |
-| `/scripts` | List available local scripts |
-| `/hooks` | Show registered lifecycle hooks |
-| `/model` | Display current model and provider info |
-| `/compact` | Summarize conversation and free context |
-| `/clear` | Clear the terminal screen |
-| `/exit` | Exit interactive mode |
-
-Custom commands from `.agent/commands/` are also available as slash commands (e.g., `/deploy-staging`).
-
-**Tab completion** works on all slash commands—press `Tab` after `/`.
 
 ---
 
-### 2. One-Shot Mode
+## 📖 How It Works
 
-Run a single goal without entering the REPL:
+### The Agent Loop
+
+```
+You give a goal
+     ↓
+🧠 LLM decomposes it into subtasks with dependencies
+     ↓
+⚡ Daemon picks up tasks (up to 3 in parallel)
+     ↓
+🔧 Each task uses tools: file system, shell, git, HTTP, scripts, credentials
+     ↓
+✅ On success → saves output, triggers dependent tasks
+❌ On failure → retries 3x, then re-decomposes with LLM
+     ↓
+💾 Everything stored in memory for future context
+```
+
+### Available Tools
+
+The agent has access to these tools when executing tasks:
+
+| Tool | What It Does |
+|------|-------------|
+| `fs.read` / `fs.write` | Read and write files |
+| `fs.mkdir` / `fs.list` | Create directories, list contents |
+| `cmd.run` | Execute shell commands |
+| `git.status` / `git.diff` / `git.commit` | Git operations |
+| `http.request` | Make HTTP API calls (GET/POST/PUT/DELETE) |
+| `secrets.get` / `secrets.list` | Access encrypted credentials |
+| `script.run` | Execute project scripts by name |
+| `command.execute` | Run pre-defined command workflows |
+
+---
+
+## 🎯 Goal-Driven Autonomy
+
+### Creating Goals
 
 ```bash
-agent run "Refactor the database module to use connection pooling"
-agent run "Fix all TypeScript errors in the project"
-agent run deploy-staging          # Runs a named Command or Skill
-```
-
----
-
-### 3. Skills
-
-Skills are reusable capabilities defined by markdown prompts and a `skill.json` manifest.
-
-```bash
-# List installed skills
-agent skills list
-
-# Search the skill hub
-agent skills search "docker"
-
-# Install a skill
-agent skills install <skill-name>
-
-# Create a custom skill
-agent skills create my-new-skill
-# → Creates .agent/skills/my-new-skill/prompt.md
-
-# Self-healing
-agent skills stats               # View success rates
-agent skills doctor my-skill     # Diagnose failures
-agent skills fix my-skill        # Auto-repair with LLM
-```
-
----
-
-### 4. Lightweight Commands
-
-Commands are quick goal templates—just a markdown file. No `skill.json` needed.
-
-Create `.agent/commands/deploy-staging.md`:
-
-```markdown
----
-name: deploy-staging
-description: Deploy current branch to staging
-tools: [cmd.run, git.status, git.diff]
----
-# Deploy to Staging
-
-Steps:
-1. Run `npm test` to verify all tests pass
-2. Run `npm run build` to create the production bundle
-3. Run `git push origin HEAD:staging` to trigger deployment
-```
-
-Now use it:
-
-```bash
-agent run deploy-staging     # From CLI
-# or
-> /deploy-staging            # From interactive mode
-```
-
-The command's markdown body becomes the LLM prompt, and only the whitelisted tools are available.
-
-```bash
-agent commands list          # See all available commands
-```
-
----
-
-### 5. Scripts
-
-Scripts are repeatable, scriptable tasks (shell/Node Python) defined via a `script.yaml` manifest. They differ from Skills and Commands because they execute directly without LLM involvement, making them perfect for CI/CD tasks, builds, or deployments.
-
-Create `.agent/scripts/deploy/script.yaml`:
-
-```yaml
-name: deploy-staging
-description: Build and deploy current branch to staging
-entrypoint: deploy.sh
-confirm: true
-args:
-  branch:
-    description: Branch to deploy
-    default: main
-```
-
-Create exactly the script you need (`deploy.sh` or `deploy.ts`):
-
-```bash
-#!/bin/bash
-echo "Deploying branch ${SCRIPT_ARG_BRANCH:-main}..."
-npm run build && git push origin HEAD:staging
-```
-
-Now execute it directly from the CLI or REPL:
-
-```bash
-agent scripts run deploy-staging --branch develop
-# or interactively
-> /scripts
-> agent scripts run deploy-staging
-```
-
-Scripts are automatically provided as context to the LLM, so if you ask the agent to "deploy to staging", it knows it can use your exact shell script to do it.
-
----
-
-### 6. Lifecycle Hooks
-
-Hooks intercept agent execution at every point. Define them in `.agent/hooks/hooks.json`:
-
-```json
-{
-  "hooks": {
-    "after:tool": [
-      {
-        "match": "fs.write",
-        "command": "npx prettier --write {{path}}",
-        "blocking": false
-      }
-    ],
-    "before:plan": [
-      {
-        "command": "./scripts/validate-env.sh",
-        "blocking": true
-      }
-    ]
-  }
-}
-```
-
-#### Available Events
-
-| Event | When |
-|-------|------|
-| `before:tool` / `after:tool` | Before/after any tool executes |
-| `before:plan` / `after:plan` | Before/after a plan runs |
-| `after:step` | After each plan step |
-| `before:skill` / `after:skill` | Around skill execution |
-| `after:decompose` | After goal decomposition |
-| `session:start` / `session:end` | At session boundaries |
-
-```bash
-agent hooks list             # Show registered hooks
-agent hooks add after:tool "npx eslint --fix {{path}}" --match fs.write
-agent hooks events           # Show all available events
-```
-
----
-
-### 6. Plugins
-
-Bundle skills, commands, and hooks into a distributable package:
-
-```
-my-plugin/
-├── plugin.json
-├── skills/
-│   └── security-scan/
-│       ├── skill.json
-│       └── prompt.md
-├── commands/
-│   └── audit.md
-└── hooks/
-    └── hooks.json
-```
-
-`plugin.json`:
-```json
-{
-  "name": "enterprise-security",
-  "version": "1.0.0",
-  "description": "Security scanning and compliance",
-  "skills": ["skills/"],
-  "commands": ["commands/"],
-  "scripts": ["scripts/"],
-  "hooks": "hooks/hooks.json"
-}
-```
-
-```bash
-agent plugins install ./my-plugin    # Install from local path
-agent plugins list                   # Show installed plugins
-agent plugins remove my-plugin       # Uninstall
-```
-
----
-
-### 7. Multi-CLI Orchestration
-
-The agent can delegate tasks to external AI CLIs when they're the right tool for the job:
-
-| Tool | CLI | Best For |
-|------|-----|----------|
-| `cli.cursor` | Cursor | Multi-file refactoring with codebase context |
-| `cli.codex` | OpenAI Codex | Code generation with sandbox execution |
-| `cli.gemini` | Gemini | Large-context analysis and reasoning |
-| `cli.claude` | Claude | Careful code review and generation |
-
-Configure in `.agent/config.json`:
-```json
-{
-  "cliTools": {
-    "cursor": { "binary": "cursor", "available": true },
-    "claude": { "binary": "claude", "available": true }
-  }
-}
-```
-
-The LLM orchestrator automatically selects the right CLI based on the task.
-
----
-
-### 8. Goal Management & Daemon
-
-For long-running, multi-step projects:
-
-```bash
-# Create a goal
+# From CLI
 agent goal add "Build authentication with OAuth2" --priority 1
 
-# AI decomposes into tasks
-agent goal decompose 1
-
-# Run tasks autonomously
-agent daemon start
-
-# Monitor progress
-agent goal list               # See goal status
-agent goal status 1           # Detailed task view
-agent daemon status           # Daemon health
-agent daemon logs             # Recent execution logs
-
-# Get reports
-agent report generate --summary
+# The LLM auto-decomposes it:
+# Task 1: Set up OAuth2 dependencies
+# Task 2: Create auth routes (depends on: 1)
+# Task 3: Implement token exchange (depends on: 1)
+# Task 4: Add middleware (depends on: 2, 3)
+# Task 5: Write tests (depends on: 4)
 ```
 
----
+### The Daemon
 
-### 9. Plans
+The daemon is the heart of autonomous execution. It runs in the background and:
 
-Create and run structured execution plans:
+- Picks up pending tasks from the queue
+- Runs **up to 3 tasks in parallel** (independent tasks only)
+- **Chains outputs** — downstream tasks get results from their dependencies
+- **Re-plans on failure** — uses LLM to suggest alternative approaches
+- Loads **all project capabilities** — skills, scripts, commands, plugins, credentials
 
 ```bash
-agent plan propose "Migrate database from MySQL to PostgreSQL"
-agent plan list
-agent plan run <plan-file>
+agent daemon start        # Start background processing
+agent daemon status       # Check health & progress
+agent daemon logs         # View execution log
+agent daemon stop         # Graceful shutdown
+```
+
+### Example Daemon Log
+
+```
+🧠 Auto-decomposing goal #1: "Build data pipeline for GitHub API"
+   ✅ Created 5 subtask(s)
+🔄 Processing task #1: "Fetch trending repos" 
+   📦 Loaded: 2 skills, 3 commands, 6 scripts, 1 plugin, 8 credentials
+✅ Task #1 completed
+🔄 Processing task #2: "Transform JSON response" [parallel: 2]
+🔄 Processing task #3: "Save to file" [parallel: 3]
+✅ Task #2 completed
+✅ Task #3 completed
+🔄 Processing task #4: "Create re-run script"
+✅ Task #4 completed — Goal 100% complete
 ```
 
 ---
 
-### 10. Memory
+## 🔑 Credential Vault
 
-The agent stores facts, learnings, and project context persistently:
+The agent has a built-in **encrypted credential store** so it can use API keys, tokens, and passwords securely.
 
-```bash
-agent memory search "database credentials"
-agent memory add "Staging server is at 10.0.0.5" --category fact
+### How It Works
+
+1. **Vault** — Secrets stored in `.agent/vault.json`, encrypted with AES-256-GCM
+2. **`.env` fallback** — Credentials from `.env` are auto-detected
+3. **Interactive capture** — If the agent needs a credential it doesn't have, it asks you via Studio
+
+### Adding Credentials
+
+**Via Studio UI:**
+1. Open Agent Studio → Credentials
+2. Click "Add Secret"
+3. Enter key name (e.g., `GITHUB_TOKEN`) and value
+4. Stored encrypted on disk
+
+**Via `.env` file:**
+```env
+GITHUB_TOKEN=ghp_xxxx
+OPENAI_API_KEY=sk-xxxx
+APIFY_TOKEN=apify_api_xxxx
 ```
+
+**Via CLI tools:**
+The LLM uses `secrets.get({ key: "GITHUB_TOKEN" })` to retrieve credentials during task execution. It never hardcodes them.
 
 ---
 
-### 11. Agent Studio
+## 📊 Agent Studio (Web Dashboard)
 
-The web-based management console for all agent subsystems:
+A full web-based management console for your agent:
 
 ```bash
 agent studio
 # → Agent Studio running at http://localhost:3333
 ```
 
-![Agent Studio Dashboard](docs/studio-screenshot-1.png)
+### Pages
 
-Studio provides:
-- **Dashboard** — View all active agent instances (REPL + daemon)
-- **Console** — Real-time terminal with command relay and approval flow
-- **Goals & Plans** — Create goals, view tasks, track progress
-- **Skills Manager** — CRUD for skill definitions (skill.json + prompt.md)
-- **Commands** — Create/delete lightweight command templates
-- **Scripts** — Create/delete local automation scripts
-- **Plugins** — View and remove installed plugin bundles
-- **Daemon Control** — Start/stop background worker, view logs
-- **Memory Explorer** — Search, add, and browse persistent memories
+| Page | What It Shows |
+|------|--------------|
+| **Console** | Real-time terminal with live command relay |
+| **Capabilities** | Loaded tools, permissions, provider info |
+| **Goals & Tasks** | Create goals, track progress, view task status |
+| **Templates** | Pre-built goal templates (blog writer, data pipeline, etc.) |
+| **Credentials** | Encrypted vault — add/delete API keys and tokens |
+| **Skills** | Installed skills with success metrics |
+| **Commands** | Lightweight automation templates |
+| **Scripts** | Project scripts with execution and output viewer |
+| **Plugins** | Installed plugin bundles |
+| **Daemon** | Start/stop daemon, view logs, health status |
+| **Memory** | Search and browse persistent agent memory |
 
-![Agent Console](docs/studio-screenshot-agent-console-2.png)
+### Goal Templates
 
----
+Studio includes **6 pre-built goal templates** for common workflows:
 
-### 12. Auto-Update
-
-The CLI automatically checks for updates on startup:
-
-```bash
-# Manual update
-agent update
-```
-
-On every launch, the agent fetches the latest npm version, compares semver,
-and installs updates in the background without blocking your session.
+- 📊 **System Health Monitor** — Dashboard with CPU/memory/disk monitoring
+- ✍️ **Blog Post Writer** — Research + write + SEO optimization
+- 🕷️ **Apify Actor Creator** — Scaffold a web scraping actor
+- 🔍 **Code Review & Refactor** — Analyze and improve code quality
+- 🔄 **Data Pipeline** — Fetch → transform → save with error handling
+- 📅 **Recurring Report** — Automated daily/weekly reports
 
 ---
 
-## 🤖 Full CLI Reference
-
-### Core
-
-| Command | Description |
-|---------|-------------|
-| `agent` | Launch interactive REPL (no subcommand) |
-| `agent run "<goal>"` | One-shot goal execution |
-| `agent init` | Initialize project configuration |
-| `agent config --init` | Set up global config |
-| `agent doctor` | System health check |
-| `agent update` | Update CLI to latest version |
-| `agent studio` | Launch web-based management console |
+## 🛠️ Extensibility
 
 ### Skills
 
-| Command | Description |
-|---------|-------------|
-| `agent skills list` | List installed skills |
-| `agent skills search <query>` | Search the skill hub |
-| `agent skills install <name>` | Install a skill |
-| `agent skills create <name>` | Create a custom skill |
-| `agent skills stats` | View performance metrics |
-| `agent skills doctor <name>` | Diagnose a failing skill |
-| `agent skills fix <name>` | Auto-repair with LLM |
+Reusable AI capabilities defined by a `skill.json` manifest + `prompt.md`:
+
+```bash
+agent skills list              # List installed skills
+agent skills create my-skill   # Create a custom skill
+agent skills stats             # View success metrics
+agent skills fix my-skill      # Auto-repair with LLM
+```
+
+**Example:** Create `.agent/skills/deploy/skill.json` + `prompt.md` — the agent uses it whenever a deployment goal comes up.
 
 ### Commands
 
-| Command | Description |
-|---------|-------------|
-| `agent commands list` | List available commands |
+Lightweight goal templates — just a markdown file with YAML frontmatter:
+
+```markdown
+---
+name: deploy-staging
+description: Deploy current branch to staging
+tools: [cmd.run, git.status]
+---
+# Deploy to Staging
+1. Run `npm test` to verify all tests pass
+2. Run `npm run build`
+3. Push to staging branch
+```
+
+```bash
+> /deploy-staging    # Use from interactive mode
+```
 
 ### Scripts
 
-| Command | Description |
-|---------|-------------|
-| `agent scripts list` | List available scripts |
-| `agent scripts run <name>` | Execute a script directly |
-| `agent scripts show <name>` | Show script arguments and details |
+Direct automation (no LLM needed) — shell, Python, or Node.js:
 
-### Hooks
+```yaml
+# .agent/scripts/deploy/script.yaml
+name: deploy-staging
+description: Build and deploy to staging
+entrypoint: run.sh
+```
 
-| Command | Description |
-|---------|-------------|
-| `agent hooks list` | Show registered hooks |
-| `agent hooks add <event> <cmd>` | Add a new hook |
-| `agent hooks events` | Show all hook events |
+```bash
+agent scripts run deploy-staging
+```
+
+The daemon auto-discovers scripts and can execute them via the `script.run` tool.
 
 ### Plugins
 
-| Command | Description |
-|---------|-------------|
-| `agent plugins list` | List installed plugins |
-| `agent plugins install <path>` | Install from local path |
-| `agent plugins remove <name>` | Remove a plugin |
+Bundle skills + commands + scripts + hooks into a package:
 
-### Goals & Daemon
+```
+my-plugin/
+├── plugin.json
+├── skills/
+├── commands/
+├── scripts/
+└── hooks/
+```
 
-| Command | Description |
-|---------|-------------|
-| `agent goal add "<title>"` | Create a goal |
-| `agent goal list` | List goals |
-| `agent goal decompose <id>` | AI breakdown |
-| `agent goal status <id>` | Task-level progress |
-| `agent daemon start` | Start background worker |
-| `agent daemon stop` | Stop background worker |
-| `agent daemon status` | Health & uptime |
+```bash
+agent plugins install ./my-plugin
+agent plugins list
+```
 
-### Plans, Memory & Reports
+### Lifecycle Hooks
 
-| Command | Description |
-|---------|-------------|
-| `agent plan propose "<desc>"` | AI-generate a plan |
-| `agent plan run <file>` | Execute a plan |
-| `agent memory search <query>` | Search agent memory |
-| `agent memory add "<fact>"` | Store a fact |
-| `agent report generate` | Activity report |
+Intercept execution at 10 event points:
+
+```json
+{
+  "hooks": {
+    "after:tool": [{
+      "match": "fs.write",
+      "command": "npx prettier --write {{path}}"
+    }]
+  }
+}
+```
+
+---
+
+## 🤖 Interactive Mode
+
+The conversational REPL with multi-turn context:
+
+```bash
+agent
+
+> Add rate limiting to the /api/auth endpoint
+  ⚡ fs.read(src/routes/auth.ts) ✓
+  ⚡ fs.write(src/middleware/rateLimit.ts) ✓
+  ✓ Done
+
+> Now write tests for it
+  ⚡ fs.write(src/__tests__/rateLimit.test.ts) ✓
+  ⚡ cmd.run(npm test) ✓
+  ✓ All 5 tests passing
+
+> /deploy-staging
+  Running command: deploy-staging...
+```
+
+### Slash Commands
+
+| Command | Action |
+|---------|--------|
+| `/help` | Show all available commands |
+| `/skills` | List installed skills |
+| `/commands` | List available commands |
+| `/scripts` | List available scripts |
+| `/model` | Display LLM provider info |
+| `/compact` | Summarize and free context |
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    CLI / REPL                        │
-│  agent run │ agent (REPL) │ /slash-commands │ MCP   │
-├─────────────────────────────────────────────────────┤
-│                  LLM Router                          │
-│  OpenAI │ Anthropic │ Azure │ Ollama (fallback)     │
-├──────────┬──────────┬──────────┬────────────────────┤
-│  Skills  │ Commands │  Hooks   │    Plugins          │
-│  .md     │  .md     │  .json   │    bundles          │
-├──────────┴──────────┴──────────┴────────────────────┤
-│              Tool Registry & Policy Engine           │
-│  fs.* │ cmd.run │ git.* │ cli.* │ project.detect    │
-├─────────────────────────────────────────────────────┤
-│  Planner  │ Executor │ Memory  │ Daemon │ Reporter  │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                     CLI / REPL / Studio                   │
+├─────────────────────────────────────────────────────────┤
+│                      LLM Router                          │
+│   OpenAI │ Anthropic │ Azure │ Ollama (fallback chain)   │
+├──────────┬──────────┬──────────┬────────────────────────┤
+│  Skills  │ Commands │  Scripts │   Plugins               │
+│  prompt  │   .md    │  .yaml   │   bundles               │
+├──────────┴──────────┴──────────┴────────────────────────┤
+│          Tool Registry & Policy Engine                    │
+│  fs.* │ cmd.run │ git.* │ http.* │ secrets.* │ script.*  │
+├─────────────────────────────────────────────────────────┤
+│  Goal Decomposer │ Daemon │ Credential Vault │ Memory    │
+└─────────────────────────────────────────────────────────┘
 ```
 
-**Key Components:**
-- **CLI / REPL**: Entry point—interactive or subcommand-based
-- **LLM Router**: Multi-provider with offline-first support and fallback chains
-- **Skills**: Markdown prompt-based capabilities
-- **Commands**: Lightweight goal templates (YAML frontmatter + prompt)
-- **Scripts**: Direct executable automation with argument injection
-- **Hooks**: Event-driven lifecycle interception
-- **Plugins**: Distributable bundles of skills + commands + scripts + hooks
-- **Tool Registry**: Sandboxed tool execution with permission gates
-- **Policy Engine**: Human-in-the-loop approval for sensitive operations
-- **Multi-CLI Tools**: Cursor, Codex, Gemini, Claude wrappers
+### Key Components
+
+| Component | Purpose |
+|-----------|---------|
+| **LLM Router** | Multi-provider routing with fallback chains (OpenAI → Anthropic → Ollama) |
+| **Goal Decomposer** | LLM-powered breakdown of goals into dependency-aware task graphs |
+| **Daemon Service** | Background task runner with parallel execution, retries, re-planning |
+| **Credential Vault** | AES-256-GCM encrypted secret storage with `.env` fallback |
+| **Tool Registry** | Sandboxed execution with permission gates |
+| **Policy Engine** | Human-in-the-loop approval for sensitive operations |
+| **Memory Store** | SQLite + FTS5 persistent memory across sessions |
+| **Plugin Loader** | Discovers and loads sub-packages of skills, commands, scripts, hooks |
 
 ---
 
-## 📚 Learning Series
+## ⚙️ Configuration
 
-Understand the agent architecture with our 12-part deep-dive:
+### `agent.yaml` (or `.agent/config.json`)
 
-1. [**Vision & Architecture**](docs/articles/01-vision-architecture.md) — The high-level design
-2. [**The Brain (Planner)**](docs/articles/02-goal-decomposition.md) — Goal decomposition
-3. [**The Body (Executor)**](docs/articles/03-skill-execution.md) — Secure skill execution
-4. [**Memory & Context**](docs/articles/04-memory-persistence.md) — SQLite & semantic search
-5. [**Self-Improvement**](docs/articles/05-self-improvement.md) — Metrics & the Auto-Fixer
-6. [**Plugin Ecosystem**](docs/articles/06-plugin-ecosystem.md) — Hooks, commands, multi-CLI
-7. [**Interactive CLI**](docs/articles/07-interactive-cli.md) — The conversational experience
-8. [**Scripts System**](docs/articles/08-scripts-system.md) — Non-LLM deterministic automation
-9. [**Agent Studio**](docs/articles/09-agent-studio.md) — Web management console
-10. [**LLM Providers**](docs/articles/10-llm-providers.md) — Provider configuration & routing
-11. [**Policy & Approvals**](docs/articles/11-policy-approvals.md) — Permission-gated execution
-12. [**Daemon & Automation**](docs/articles/12-daemon-automation.md) — Background task processing
+```yaml
+llm:
+  provider: openai          # openai | anthropic | azure | ollama
+  model: gpt-4o
+  fallback:
+    - provider: anthropic
+      model: claude-3-sonnet
 
-### Reference
-- [**REST API Reference**](docs/API.md) — Complete Studio API docs
-- [**Configuration Reference**](docs/CONFIGURATION.md) — All config options
+daemon:
+  maxConcurrent: 3          # Parallel task limit
+  
+policy:
+  permissions:
+    - "*"                   # Wildcard for full autonomy
+```
 
-### Comparisons
-- [**vs OpenClaw**](docs/comparisons/openclaw.md) — How we differ from AI OS projects
+### LLM Providers
+
+| Provider | Env Variable | Models |
+|----------|-------------|--------|
+| OpenAI | `OPENAI_API_KEY` | gpt-4o, gpt-4o-mini |
+| Anthropic | `ANTHROPIC_API_KEY` | claude-3-sonnet, claude-3-opus |
+| Azure OpenAI | `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT` | Any deployed model |
+| Ollama | None (local) | llama3, codellama, mistral |
 
 ---
 
-## 🔮 Roadmap
+## 📋 Full CLI Reference
 
-Check out our detailed [**ROADMAP.md**](ROADMAP.md) to see what's next:
-- ✅ **Phase 5**: Plugin Ecosystem & Extensibility
-- ✅ **Phase 6**: Interactive CLI Experience
-- 🔜 **Phase 1**: Sandboxed Execution & Secrets Management
-- 🔜 **Phase 2**: Multi-Agent Collaboration (The Swarm)
-- 🔜 **Phase 3**: Voice & Vision Interfaces
-- 🔜 **Phase 4**: The Agent Cloud (Skill Hub, Remote Execution, Dashboard)
+### Core Commands
+
+```bash
+agent                           # Interactive REPL
+agent run "<goal>"              # One-shot goal execution
+agent init                      # Initialize project
+agent studio                    # Web dashboard at :3333
+agent doctor                    # System health check
+agent update                    # Update to latest version
+```
+
+### Goal & Daemon
+
+```bash
+agent goal add "<title>"        # Create a goal
+agent goal list                 # List all goals
+agent goal decompose <id>       # AI breakdown into tasks
+agent goal status <id>          # Task-level progress
+
+agent daemon start              # Start background worker
+agent daemon stop               # Stop gracefully
+agent daemon status             # Health & uptime
+agent daemon logs               # Recent execution logs
+```
+
+### Skills, Commands, Scripts, Plugins
+
+```bash
+agent skills list | create | stats | fix
+agent commands list
+agent scripts list | run <name> | show <name>
+agent plugins list | install <path> | remove <name>
+agent hooks list | add <event> <cmd>
+```
+
+### Memory & Reports
+
+```bash
+agent memory search "<query>"   # Semantic search
+agent memory add "<fact>"       # Store a fact
+agent report generate           # Activity summary
+```
+
+---
+
+## 📁 Project Structure
+
+After `agent init`, your project contains:
+
+```
+your-project/
+├── .agent/
+│   ├── config.json          # Agent configuration
+│   ├── vault.json           # Encrypted credentials (auto-created)
+│   ├── memory.db            # SQLite persistent memory
+│   ├── daemon.log           # Daemon execution log
+│   ├── skills/              # Custom skills
+│   │   └── my-skill/
+│   │       ├── skill.json
+│   │       └── prompt.md
+│   ├── commands/            # Lightweight commands
+│   │   └── deploy.md
+│   ├── scripts/             # Automation scripts
+│   │   └── health-check/
+│   │       ├── script.yaml
+│   │       └── run.sh
+│   ├── plugins/             # Installed plugins
+│   └── hooks/
+│       └── hooks.json       # Lifecycle hooks
+└── .env                     # Environment variables (auto-detected)
+```
+
+---
+
+## 🔒 Security
+
+- **Credential encryption** — AES-256-GCM with machine-specific keys
+- **Permission gating** — Policy engine controls which tools can execute
+- **Human-in-the-loop** — Tasks can require manual approval before executing
+- **No credential leaking** — Secrets are never logged or included in LLM prompts as raw values
+- **Sandboxed execution** — Tools execute within the project directory scope
+
+---
+
+## 🆕 What's New in v0.9.25
+
+- **⚡ Parallel Task Execution** — Up to 3 tasks run simultaneously
+- **🔗 Task Output Chaining** — Downstream tasks receive upstream results
+- **🔁 Dynamic Re-decomposition** — Failed tasks trigger LLM re-planning
+- **🔑 Credential Vault** — Encrypted secret storage with Studio UI
+- **🌐 HTTP Tool** — `http.request` for API integrations
+- **📦 Full Capability Loading** — Daemon uses all project skills, scripts, commands, plugins
+- **📋 Goal Templates** — 6 pre-built workflow templates in Studio
+- **📜 Script & Command Tools** — LLM can execute existing scripts and commands
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+We welcome contributions! Key areas:
 
-Key areas where we need help:
-- Writing new Skills
-- Improving Planner prompt engineering
-- Building the Web Dashboard
+- Writing new Skills and Commands
+- Improving LLM prompt engineering
+- Building Studio UI components
 - Creating community Plugins
+- Writing documentation
 
 ---
 
