@@ -782,6 +782,58 @@ export function createStudioServer() {
     });
 
     // ═══════════════════════════════════════════════
+    // COST TRACKING API
+    // ═══════════════════════════════════════════════
+    app.get('/api/instances/:id/costs/summary', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+
+            const { CostTracker } = await import('../plugins/cost-tracker/index.js');
+            const tracker = new CostTracker(inst.cwd);
+            const summary = await tracker.getSummary();
+            res.json(summary);
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    app.get('/api/instances/:id/costs/recent', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+
+            const { CostTracker } = await import('../plugins/cost-tracker/index.js');
+            const tracker = new CostTracker(inst.cwd);
+            const limit = parseInt(req.query.limit as string) || 50;
+            const entries = await tracker.getRecent(limit);
+            res.json({ entries });
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    // Notifications log
+    app.get('/api/instances/:id/notifications', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+
+            const { readFile } = await import('node:fs/promises');
+            const logPath = join(inst.cwd, '.agent', 'notifications.log');
+            try {
+                const raw = await readFile(logPath, 'utf-8');
+                const lines = raw.trim().split('\n').filter(Boolean).slice(-100);
+                res.json({ notifications: lines });
+            } catch {
+                res.json({ notifications: [] });
+            }
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    // ═══════════════════════════════════════════════
     // SOCKET.IO FOR LIVE LOGS & APPROVAL RELAY
     // ═══════════════════════════════════════════════
     io.on('connection', (socket) => {

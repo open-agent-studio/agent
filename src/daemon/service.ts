@@ -28,6 +28,8 @@ import { CommandLoader } from '../commands/loader.js';
 import { ScriptLoader } from '../scripts/loader.js';
 import { PluginLoader } from '../plugins/loader.js';
 import { HookRegistry } from '../hooks/registry.js';
+import { registerNotificationTools, NotificationService } from '../plugins/notifications/index.js';
+import { registerCostTools, CostTracker } from '../plugins/cost-tracker/index.js';
 
 /**
  * Daemon Service — The autonomous agent heartbeat
@@ -53,6 +55,10 @@ export class DaemonService extends EventEmitter {
     private activeTasks: Map<number, Promise<void>> = new Map();
     private maxConcurrent = 3;
     private pendingCredentials: Map<string, { resolve: (v: string | null) => void; timeout: ReturnType<typeof setTimeout> }> = new Map();
+    private notificationService: NotificationService;
+    private costTracker: CostTracker;
+    /** exposed for API access */
+    public getCostTracker(): CostTracker { return this.costTracker; }
     private stats = {
         tasksProcessed: 0,
         tasksCompleted: 0,
@@ -69,6 +75,8 @@ export class DaemonService extends EventEmitter {
         this.logPath = path.join(getAgentDir(), 'daemon.log');
         this.instanceRegistry = new InstanceRegistry();
         this.instanceId = `daemon-${Date.now()}`;
+        this.notificationService = new NotificationService(workDir);
+        this.costTracker = new CostTracker(workDir);
 
         // Wire credential capture: when CredentialStore can't find a key → emit event
         this.credentialStore.onCredentialRequired = async (key: string, reason: string) => {
@@ -293,6 +301,7 @@ export class DaemonService extends EventEmitter {
             this.stats.tasksCompleted++;
             await this.log(`✅ Task #${task.id} completed: ${result.slice(0, 100)}`);
             this.emit('task:complete', { taskId: task.id, title: task.title, output: result.slice(0, 500) });
+            this.notificationService.onTaskComplete(task.title, result).catch(() => { });
 
             // Auto-save completion as a memory
             this.memoryStore.save(
@@ -528,6 +537,8 @@ Keep tasks simple and actionable. Address the root cause of the failure.`,
             registerCredentialTools(registry, this.credentialStore);
             registerScriptTool(registry, scriptLoader, this.workDir);
             registerCommandTool(registry, commandLoader);
+            registerNotificationTools(registry, this.workDir);
+            registerCostTools(registry, this.workDir);
 
             await this.log(`   📦 Loaded: ${skillLoader.list?.()?.length ?? 0} skills, ${commandLoader.size} commands, ${scriptLoader.list().length} scripts, ${pluginLoader.size} plugins, ${(await this.credentialStore.list()).length} credentials`);
 

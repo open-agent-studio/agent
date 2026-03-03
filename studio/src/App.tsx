@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Terminal, Activity, Workflow, Server, ArrowLeft, Zap, Target,
-  Wrench, Code, FileCode, Package, Brain, Sparkles, KeyRound
+  Wrench, Code, FileCode, Package, Brain, Sparkles, KeyRound, DollarSign
 } from 'lucide-react';
 import { Terminal as TerminalComponent } from './components/Terminal';
 import { Capabilities } from './components/Capabilities';
@@ -17,6 +17,7 @@ import { GoalTemplates } from './components/GoalTemplates';
 import CredentialsManager from './components/CredentialsManager';
 import TaskStreaming from './components/TaskStreaming';
 import CredentialCapture from './components/CredentialCapture';
+import CostDashboard from './components/CostDashboard';
 
 export default function App() {
   return (
@@ -165,6 +166,7 @@ const sidebarItems = [
   { icon: FileCode, label: 'Scripts', path: 'scripts' },
   { icon: Package, label: 'Plugins', path: 'plugins' },
   { icon: Server, label: 'Daemon', path: 'daemon' },
+  { icon: DollarSign, label: 'Costs', path: 'costs' },
   { icon: Brain, label: 'Memory', path: 'memory' },
 ];
 
@@ -214,6 +216,7 @@ function InstanceView() {
           <Route path="scripts" element={<ScriptsManager />} />
           <Route path="plugins" element={<PluginsManager />} />
           <Route path="daemon" element={<DaemonPanel />} />
+          <Route path="costs" element={<CostDashboard />} />
           <Route path="memory" element={<MemoryExplorer />} />
         </Routes>
         {/* Global credential capture modal */}
