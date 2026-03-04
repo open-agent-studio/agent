@@ -464,9 +464,19 @@ my-plugin/
 
 ### Install and Manage
 
+Plugins can be installed locally from a path or remotely from the official **Agent Hub** (`praveencs87/agent-skills` repository).
+
 ```bash
+# Install the official GitHub plugin from the Agent Hub
+agent plugins install github
+
+# Install a local plugin bundle
 agent plugins install ./my-plugin
+
+# List all installed plugins
 agent plugins list
+
+# Remove a plugin
 agent plugins remove my-plugin
 ```
 

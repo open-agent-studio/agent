@@ -301,21 +301,24 @@ The daemon auto-discovers scripts and can execute them via the `script.run` tool
 
 ### Plugins
 
-Bundle skills + commands + scripts + hooks into a package:
-
-```
-my-plugin/
-├── plugin.json
-├── skills/
-├── commands/
-├── scripts/
-└── hooks/
-```
+Bundle native Node.js tools, skills, commands, scripts, and hooks into a single distributable package. The **Agent Hub** acts as the official registry for community plugins.
 
 ```bash
+# Install the official GitHub plugin from the Hub
+agent plugins install github
+
+# Or install from a local path
 agent plugins install ./my-plugin
+
+# List installed plugins
 agent plugins list
 ```
+
+**Featured Plugin: GitHub (`github`)**
+- Grants the agent zero-dependency native control over GitHub.
+- Can create repos, open PRs, and manipulate Issues.
+- Unlocks **Advanced Global Search** natively.
+- Can view, dispatch, and monitor **GitHub Actions CI/CD workflows**.
 
 ### Lifecycle Hooks
 
