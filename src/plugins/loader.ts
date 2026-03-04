@@ -96,6 +96,17 @@ export class PluginLoader {
                 return null;
             }
 
+            // Lockfile verification
+            const { LockfileManager } = await import('../hub/lockfile.js');
+            const locker = new LockfileManager(process.cwd());
+            const verification = await locker.verifyDirectory('plugin', manifest.name, pluginDir);
+            if (!verification.valid) {
+                console.error(`\n🚨 SECURITY WARNING: Plugin "${manifest.name}" failed integrity check!`);
+                verification.errors.forEach(e => console.error(`   - ${e}`));
+                console.error(`   Refusing to load tampered plugin.\n`);
+                return null;
+            }
+
             let skillsCount = 0;
             let commandsCount = 0;
             let hooksCount = 0;

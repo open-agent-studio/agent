@@ -79,9 +79,25 @@ export class ConfigLoader {
     /**
      * Set a specific config value and save to project config
      */
+    /**
+     * Well-known shorthand keys → their actual nested config path
+     */
+    private static readonly KEY_ALIASES: Record<string, string> = {
+        'OPENAI_API_KEY': 'models.providers.openai.apiKey',
+        'ANTHROPIC_API_KEY': 'models.providers.anthropic.apiKey',
+        'AZURE_API_KEY': 'models.providers.azure.apiKey',
+        'AZURE_DEPLOYMENT_NAME': 'models.providers.azure.deploymentName',
+        'DEFAULT_LLM_PROVIDER': 'models.routing.defaultProvider',
+        'DEFAULT_MODEL_NAME': 'models.providers.openai.model',
+        'APIFY_API_TOKEN': 'credentials.APIFY_API_TOKEN',
+    };
+
     async setValue(keyPath: string, value: unknown): Promise<void> {
+        // Resolve well-known shorthand aliases to their actual config paths
+        const resolvedPath = ConfigLoader.KEY_ALIASES[keyPath] ?? keyPath;
+
         const config = this.get() as unknown as Record<string, unknown>;
-        const keys = keyPath.split('.');
+        const keys = resolvedPath.split('.');
         let current = config;
         for (let i = 0; i < keys.length - 1; i++) {
             const key = keys[i];
@@ -92,13 +108,15 @@ export class ConfigLoader {
         }
         current[keys[keys.length - 1]] = value;
 
-        // Re-validate
-        const result = validateSchema(AgentConfigSchema, config, 'agent.config.json');
-        if (!result.success) {
-            throw new Error(`Invalid config value:\n${result.errors.join('\n')}`);
+        // Re-validate (skip validation for credential paths since they aren't in the schema)
+        if (!resolvedPath.startsWith('credentials.')) {
+            const result = validateSchema(AgentConfigSchema, config, 'agent.config.json');
+            if (!result.success) {
+                throw new Error(`Invalid config value:\n${result.errors.join('\n')}`);
+            }
+            this.config = result.data as AgentConfig;
         }
 
-        this.config = result.data as AgentConfig;
         await writeFile(this.configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
     }
 
@@ -124,6 +142,7 @@ export class ConfigLoader {
 
     private applyEnvOverrides(config: Record<string, unknown>): Record<string, unknown> {
         const envMap: Record<string, string> = {
+            // AGENT_-prefixed (original convention)
             'AGENT_OPENAI_API_KEY': 'models.providers.openai.apiKey',
             'AGENT_ANTHROPIC_API_KEY': 'models.providers.anthropic.apiKey',
             'AZURE_API_KEY': 'models.providers.azure.apiKey',
@@ -132,6 +151,10 @@ export class ConfigLoader {
             'AZURE_API_VERSION': 'models.providers.azure.apiVersion',
             'AGENT_DEFAULT_PROVIDER': 'models.routing.defaultProvider',
             'AGENT_OFFLINE_FIRST': 'models.routing.offlineFirst',
+            // Bare env var aliases (for .env compatibility)
+            'OPENAI_API_KEY': 'models.providers.openai.apiKey',
+            'ANTHROPIC_API_KEY': 'models.providers.anthropic.apiKey',
+            'APIFY_API_TOKEN': 'credentials.APIFY_API_TOKEN',
         };
 
         for (const [envVar, configPath] of Object.entries(envMap)) {

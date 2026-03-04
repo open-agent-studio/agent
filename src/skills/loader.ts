@@ -78,6 +78,18 @@ export class SkillLoader {
             }
 
             const manifest = result.data as SkillManifest;
+
+            // Lockfile verification
+            const { LockfileManager } = await import('../hub/lockfile.js');
+            const locker = new LockfileManager(process.cwd());
+            const verification = await locker.verifyDirectory('skill', manifest.name, skillDir);
+            if (!verification.valid) {
+                console.error(`\n🚨 SECURITY WARNING: Skill "${manifest.name}" failed integrity check!`);
+                verification.errors.forEach(e => console.error(`   - ${e}`));
+                console.error(`   Refusing to load tampered skill.\n`);
+                return null;
+            }
+
             const loaded: LoadedSkill = {
                 manifest,
                 path: skillDir,

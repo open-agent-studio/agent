@@ -18,29 +18,29 @@ export function getAgentDir(cwd: string = process.cwd()): string {
 /**
  * Get the skills directory
  */
-export function getSkillsDir(): string {
-    return path.join(getAgentDir(), 'skills');
+export function getSkillsDir(cwd?: string): string {
+    return path.join(getAgentDir(cwd), 'skills');
 }
 
 /**
  * Get the plans directory
  */
-export function getPlansDir(): string {
-    return path.join(getAgentDir(), 'plans');
+export function getPlansDir(cwd?: string): string {
+    return path.join(getAgentDir(cwd), 'plans');
 }
 
 /**
  * Get the runs directory
  */
-export function getRunsDir(): string {
-    return path.join(getAgentDir(), 'runs');
+export function getRunsDir(cwd?: string): string {
+    return path.join(getAgentDir(cwd), 'runs');
 }
 
 /**
  * Get the plugins directory
  */
-export function getPluginsDir(): string {
-    return path.join(getAgentDir(), 'plugins');
+export function getPluginsDir(cwd?: string): string {
+    return path.join(getAgentDir(cwd), 'plugins');
 }
 
 /**

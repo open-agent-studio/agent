@@ -56,24 +56,78 @@ export function createPluginsCommand(): Command {
             }
         });
 
+    // ─── Search plugins ───
+    cmd.command('search <query>')
+        .description('Search for plugins on the Agent Hub (agent-skills registry)')
+        .option('-c, --category <category>', 'Filter by category')
+        .action(async (query: string, opts: { category?: string }) => {
+            const configLoader = new ConfigLoader();
+            const config = await configLoader.load();
+            const { RegistryClient } = await import('../../hub/registry.js');
+            const client = new RegistryClient({
+                skillsUrl: config.skills?.registryUrl,
+                pluginsUrl: config.skills?.registryUrl
+            });
+
+            console.log(chalk.dim(`\n🔍 Searching Agent Hub (via agent-skills) for plugins matching "${query}"...\n`));
+
+            try {
+                const results = await client.search('plugin', query, opts.category);
+                if (results.length === 0) {
+                    console.log(chalk.yellow(`  No plugins found matching "${query}"`));
+                    return;
+                }
+
+                console.log(chalk.bold.cyan(`  Found ${results.length} plugin(s):\n`));
+                for (const plugin of results) {
+                    console.log(`  ${chalk.white.bold(plugin.name)} ${chalk.dim(`v${plugin.version}`)} ${chalk.magenta(`[${plugin.category || 'Uncategorized'}]`)}`);
+                    console.log(chalk.dim(`    ${plugin.description}`));
+                    console.log(chalk.dim(`    Install: agent plugins install ${plugin.name}\n`));
+                }
+            } catch (err) {
+                console.error(chalk.red(`\n✗ Failed to search hub: ${(err as Error).message}\n`));
+                process.exit(1);
+            }
+        });
+
     // ─── Install a plugin ───
-    cmd.command('install')
-        .description('Install a plugin from a local path')
-        .argument('<path>', 'Path to the plugin directory')
-        .action(async (sourcePath: string) => {
-            const absSource = path.resolve(sourcePath);
+    cmd.command('install <source>')
+        .description('Install a plugin from the Agent Hub (agent-skills) or a local path')
+        .action(async (source: string) => {
             const configLoader = new ConfigLoader();
             const config = await configLoader.load();
 
-            const targetDir = path.resolve(process.cwd(), config.plugins.installPaths[0] ?? '.agent/plugins');
-            const pluginDirName = path.basename(absSource);
-            const targetPath = path.join(targetDir, pluginDirName);
+            const isLocalPath = source.startsWith('.') || source.startsWith('/') || source.includes(path.sep);
 
-            mkdirSync(targetDir, { recursive: true });
-            cpSync(absSource, targetPath, { recursive: true });
+            if (isLocalPath) {
+                const absSource = path.resolve(source);
+                const targetDir = path.resolve(process.cwd(), config.plugins.installPaths[0] ?? '.agent/plugins');
+                const pluginDirName = path.basename(absSource);
+                const targetPath = path.join(targetDir, pluginDirName);
 
-            console.log(chalk.green(`✓ Plugin installed to ${path.relative(process.cwd(), targetPath)}`));
-            console.log(chalk.dim('  It will be loaded automatically on next agent run.'));
+                mkdirSync(targetDir, { recursive: true });
+                cpSync(absSource, targetPath, { recursive: true });
+
+                console.log(chalk.green(`✓ Local plugin installed to ${path.relative(process.cwd(), targetPath)}`));
+                console.log(chalk.dim('  It will be loaded automatically on next agent run.'));
+            } else {
+                console.log(chalk.dim(`\n📥 Installing plugin "${source}" from Agent Hub (via agent-skills)...\n`));
+                try {
+                    const { RegistryClient } = await import('../../hub/registry.js');
+                    const client = new RegistryClient({
+                        skillsUrl: config.skills?.registryUrl,
+                        pluginsUrl: config.skills?.registryUrl
+                    });
+                    const { item, destPath } = await client.install('plugin', source, process.cwd());
+
+                    console.log(chalk.green(`  ✓ Installed "${item.name}" v${item.version}`));
+                    console.log(chalk.dim(`    Description: ${item.description}`));
+                    console.log(chalk.dim(`    Path:        ${destPath}\n`));
+                } catch (err) {
+                    console.error(chalk.red(`\n✗ Failed to install "${source}": ${(err as Error).message}\n`));
+                    process.exit(1);
+                }
+            }
         });
 
     // ─── Remove a plugin ───
