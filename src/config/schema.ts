@@ -137,6 +137,47 @@ const SandboxConfigSchema = z.object({
     autoDestroy: z.boolean().default(true),
 });
 
+// ─── Swarm Config ───
+const SwarmConfigSchema = z.object({
+    enabled: z.boolean().default(false),
+    maxAgents: z.number().default(5),
+    model: z.string().default('gpt-4o'),
+    allowDelegation: z.boolean().default(true),
+    maxDelegationDepth: z.number().default(3),
+    agentTimeout: z.number().default(120000),
+});
+
+// ─── Desktop Config ───
+const DesktopConfigSchema = z.object({
+    enabled: z.boolean().default(false),
+    screenshotFormat: z.enum(['png', 'jpg']).default('png'),
+    screenshotQuality: z.number().default(80),
+    actionDelay: z.number().default(100),
+    ocrEnabled: z.boolean().default(false),
+    tempDir: z.string().default('/tmp/agent-desktop'),
+});
+
+// ─── Multimodal Config ───
+const MultimodalConfigSchema = z.object({
+    enabled: z.boolean().default(false),
+    voice: z.object({
+        model: z.string().default('whisper-1'),
+        language: z.string().optional(),
+        format: z.enum(['wav', 'mp3', 'webm']).default('wav'),
+    }).default({}),
+    vision: z.object({
+        model: z.string().default('gpt-4o'),
+        maxTokens: z.number().default(1024),
+        detail: z.enum(['low', 'high', 'auto']).default('auto'),
+    }).default({}),
+    tts: z.object({
+        model: z.string().default('tts-1'),
+        voice: z.string().default('alloy'),
+        format: z.enum(['mp3', 'opus', 'aac', 'flac']).default('mp3'),
+        speed: z.number().default(1.0),
+    }).default({}),
+});
+
 // ─── Full Config ───
 export const AgentConfigSchema = z.object({
     $schema: z.string().optional(),
@@ -157,6 +198,9 @@ export const AgentConfigSchema = z.object({
     daemon: DaemonConfigSchema.default({}),
     mcp: McpConfigSchema.default({}),
     sandbox: SandboxConfigSchema.default({}),
+    swarm: SwarmConfigSchema.default({}),
+    desktop: DesktopConfigSchema.default({}),
+    multimodal: MultimodalConfigSchema.default({}),
 });
 
 export type AgentConfig = z.infer<typeof AgentConfigSchema>;

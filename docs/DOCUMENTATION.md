@@ -541,6 +541,133 @@ agent studio
 | **Daemon** | Start/stop daemon, view logs, check health |
 | **Costs** | Monitor LLM token usage and spend per model |
 | **Memory** | Search, add, and browse persistent agent memories |
+| **Sandbox** | Monitor Docker sandbox status, start/stop containers |
+| **Swarm** | View multi-agent sessions, agents, tasks, and delegation |
+| **Desktop** | Screen capture, mouse clicks, keyboard input, hotkeys |
+| **Multimodal** | Voice transcription, image analysis, text-to-speech |
+
+---
+
+## Sandboxed Docker Execution
+
+Run all `cmd.run` commands inside isolated Docker containers for safe execution:
+
+```bash
+agent sandbox start              # Spin up an ephemeral container
+agent sandbox status             # Show container info and uptime
+agent sandbox stop               # Destroy the container
+```
+
+### Configuration
+
+```yaml
+# agent.yaml
+sandbox:
+  enabled: true
+  image: node:20-slim
+  timeout: 60000
+  network: bridge              # bridge | host | none
+  mounts:
+    - hostPath: "."
+      containerPath: "/project"
+      readOnly: false
+```
+
+When sandbox is active, all shell commands execute inside the Docker container via `docker exec`.
+
+---
+
+## Multi-Agent Swarm
+
+Coordinate multiple specialized AI agents on complex goals:
+
+```bash
+agent swarm start "Build a REST API with auth and tests"
+agent swarm status               # View agents, tasks, completion
+agent swarm roles                # List available agent roles
+agent swarm stop                 # Stop the session
+```
+
+### Built-in Roles
+
+| Role | Purpose | Tools |
+|------|---------|-------|
+| **Planner** | Decomposes goals into tasks, assigns to specialists | `fs.read`, `project.detect` |
+| **Coder** | Writes production-ready code | `fs.read`, `fs.write`, `cmd.run`, `git.diff` |
+| **Reviewer** | Reviews code for bugs, security, and style | `fs.read`, `fs.search`, `git.diff` |
+| **Researcher** | Gathers information, analyzes patterns | `fs.read`, `fs.search`, `cmd.run` |
+| **Tester** | Writes and runs tests | `fs.read`, `fs.write`, `cmd.run` |
+
+### Configuration
+
+```yaml
+swarm:
+  enabled: true
+  maxAgents: 5
+  model: gpt-4o
+  allowDelegation: true
+  maxDelegationDepth: 3
+```
+
+---
+
+## Desktop Automation
+
+Control the desktop with screenshots, mouse, and keyboard:
+
+```bash
+agent desktop screenshot         # Capture full screen
+agent desktop screenshot -r 0,0,800,600  # Capture region
+agent desktop click 500 300      # Click at coordinates
+agent desktop type "Hello world" --enter
+agent desktop hotkey ctrl+s      # Keyboard shortcut
+```
+
+### Supported Platforms
+
+| Platform | Screenshot Tool | Input Tool |
+|----------|----------------|------------|
+| **Linux** | scrot, gnome-screenshot, ImageMagick | xdotool |
+| **macOS** | screencapture | osascript, cliclick |
+| **Windows** | PowerShell | (planned) |
+
+### Configuration
+
+```yaml
+desktop:
+  enabled: true
+  screenshotFormat: png
+  actionDelay: 100
+  tempDir: /tmp/agent-desktop
+```
+
+---
+
+## Multimodal Interfaces
+
+Voice input, image analysis, and text-to-speech powered by OpenAI:
+
+```bash
+agent multimodal transcribe recording.wav          # Speech → Text (Whisper)
+agent multimodal analyze screenshot.png -p "What UI bugs do you see?"  # Vision
+agent multimodal speak "Deployment complete"       # Text → Speech
+```
+
+### Configuration
+
+```yaml
+multimodal:
+  enabled: true
+  voice:
+    model: whisper-1
+  vision:
+    model: gpt-4o
+    detail: auto
+  tts:
+    model: tts-1
+    voice: alloy           # alloy, echo, fable, onyx, nova, shimmer
+    format: mp3
+```
 
 ---
 

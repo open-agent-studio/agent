@@ -17,6 +17,9 @@ import { createScriptsCommand } from './commands/scripts-cmd.js';
 import { createStudioCommand } from './commands/studio-cmd.js';
 import { createUpdateCommand } from './commands/update.js';
 import { createSandboxCommand } from './commands/sandbox.js';
+import { createSwarmCommand } from './commands/swarm.js';
+import { createDesktopCommand } from './commands/desktop.js';
+import { createMultimodalCommand } from './commands/multimodal.js';
 import { getAgentVersion } from '../utils/version.js';
 
 /**
@@ -53,6 +56,9 @@ export function createCLI(): Command {
     program.addCommand(createStudioCommand());
     program.addCommand(createUpdateCommand());
     program.addCommand(createSandboxCommand());
+    program.addCommand(createSwarmCommand());
+    program.addCommand(createDesktopCommand());
+    program.addCommand(createMultimodalCommand());
 
     return program;
 }

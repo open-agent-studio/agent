@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Terminal, Activity, Workflow, Server, ArrowLeft, Zap, Target,
-  Wrench, Code, FileCode, Package, Brain, Sparkles, KeyRound, DollarSign, Bell
+  Wrench, Code, FileCode, Package, Brain, Sparkles, KeyRound, DollarSign, Bell,
+  Container, Users, Monitor, Mic
 } from 'lucide-react';
 import { Terminal as TerminalComponent } from './components/Terminal';
 import { Capabilities } from './components/Capabilities';
@@ -19,6 +20,10 @@ import TaskStreaming from './components/TaskStreaming';
 import CredentialCapture from './components/CredentialCapture';
 import CostDashboard from './components/CostDashboard';
 import NotificationsPanel from './components/NotificationsPanel';
+import SandboxPanel from './components/SandboxPanel';
+import SwarmPanel from './components/SwarmPanel';
+import DesktopPanel from './components/DesktopPanel';
+import MultimodalPanel from './components/MultimodalPanel';
 
 export default function App() {
   return (
@@ -170,6 +175,10 @@ const sidebarItems = [
   { icon: DollarSign, label: 'Costs', path: 'costs' },
   { icon: Bell, label: 'Notifications', path: 'notifications' },
   { icon: Brain, label: 'Memory', path: 'memory' },
+  { icon: Container, label: 'Sandbox', path: 'sandbox' },
+  { icon: Users, label: 'Swarm', path: 'swarm' },
+  { icon: Monitor, label: 'Desktop', path: 'desktop' },
+  { icon: Mic, label: 'Multimodal', path: 'multimodal' },
 ];
 
 function InstanceView() {
@@ -221,6 +230,10 @@ function InstanceView() {
           <Route path="costs" element={<CostDashboard />} />
           <Route path="notifications" element={<NotificationsPanel />} />
           <Route path="memory" element={<MemoryExplorer />} />
+          <Route path="sandbox" element={<SandboxPanel />} />
+          <Route path="swarm" element={<SwarmPanel />} />
+          <Route path="desktop" element={<DesktopPanel />} />
+          <Route path="multimodal" element={<MultimodalPanel />} />
         </Routes>
         {/* Global credential capture modal */}
         <CredentialCapture />

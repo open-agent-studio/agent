@@ -889,6 +889,111 @@ export function createStudioServer() {
     });
 
     // ═══════════════════════════════════════════════
+    // SANDBOX API
+    // ═══════════════════════════════════════════════
+    app.get('/api/sandbox/status', async (_req, res) => {
+        try {
+            const { getSandboxEngine } = await import('../sandbox/engine.js');
+            const engine = getSandboxEngine();
+            if (!engine) return res.json({ enabled: false, running: false, image: 'node:20-slim' });
+            const status = await engine.status();
+            res.json(status);
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    app.post('/api/sandbox/start', async (_req, res) => {
+        try {
+            const { initSandboxEngine } = await import('../sandbox/engine.js');
+            const engine = initSandboxEngine(process.cwd(), { enabled: true });
+            const container = await engine.start();
+            res.json(container);
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    app.post('/api/sandbox/stop', async (_req, res) => {
+        try {
+            const { getSandboxEngine } = await import('../sandbox/engine.js');
+            const engine = getSandboxEngine();
+            if (engine) await engine.stop();
+            res.json({ success: true });
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    // ═══════════════════════════════════════════════
+    // SWARM API
+    // ═══════════════════════════════════════════════
+    app.get('/api/swarm/status', async (_req, res) => {
+        try {
+            const { getSwarmOrchestrator } = await import('../swarm/orchestrator.js');
+            const orch = getSwarmOrchestrator();
+            if (!orch) return res.json({ swarmId: '', status: 'idle', agents: [], tasks: [] });
+            res.json(orch.getStatus());
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    app.post('/api/swarm/stop', async (_req, res) => {
+        try {
+            const { getSwarmOrchestrator } = await import('../swarm/orchestrator.js');
+            const orch = getSwarmOrchestrator();
+            if (orch) orch.stop();
+            res.json({ success: true });
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    // ═══════════════════════════════════════════════
+    // DESKTOP API
+    // ═══════════════════════════════════════════════
+    app.post('/api/desktop/screenshot', async (_req, res) => {
+        try {
+            const { initDesktopEngine } = await import('../desktop/engine.js');
+            const engine = initDesktopEngine({ enabled: true });
+            const result = await engine.screenshot();
+            res.json(result);
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    app.post('/api/desktop/click', async (req, res) => {
+        try {
+            const { initDesktopEngine } = await import('../desktop/engine.js');
+            const engine = initDesktopEngine({ enabled: true });
+            const result = await engine.mouseAction({ type: 'click', x: req.body.x, y: req.body.y });
+            res.json(result);
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    app.post('/api/desktop/type', async (req, res) => {
+        try {
+            const { initDesktopEngine } = await import('../desktop/engine.js');
+            const engine = initDesktopEngine({ enabled: true });
+            const result = await engine.typeText(req.body.text);
+            res.json(result);
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    app.post('/api/desktop/hotkey', async (req, res) => {
+        try {
+            const { initDesktopEngine } = await import('../desktop/engine.js');
+            const engine = initDesktopEngine({ enabled: true });
+            const parts = req.body.combo.split('+');
+            const key = parts.pop();
+            const result = await engine.hotkey(key, parts);
+            res.json(result);
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    // ═══════════════════════════════════════════════
+    // MULTIMODAL API
+    // ═══════════════════════════════════════════════
+    app.post('/api/multimodal/speak', async (req, res) => {
+        try {
+            const { initMultimodalEngine } = await import('../multimodal/engine.js');
+            const engine = initMultimodalEngine({ enabled: true, tts: { model: 'tts-1', voice: req.body.voice || 'alloy', format: 'mp3', speed: 1.0 } });
+            const result = await engine.speak(req.body.text);
+            res.json(result);
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    // ═══════════════════════════════════════════════
     // SERVE FRONTEND
     // ═══════════════════════════════════════════════
     // Resolve relative to the package root (dist/src/server/app.js -> ../../.. -> package root)

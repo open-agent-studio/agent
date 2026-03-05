@@ -320,6 +320,49 @@ agent plugins list
 - Unlocks **Advanced Global Search** natively.
 - Can view, dispatch, and monitor **GitHub Actions CI/CD workflows**.
 
+**16 Plugins Available** — Slack, Notion, Vercel, Supabase, Stripe, AWS, Discord, OpenAI, Linear, Docker, MongoDB, Firebase, Telegram, HuggingFace, Resend.
+
+### 🐳 Sandboxed Execution
+
+Run commands safely inside Docker containers:
+
+```bash
+agent sandbox start              # Spin up ephemeral container
+agent sandbox status             # Container info
+agent sandbox stop               # Destroy sandbox
+```
+
+### 🐝 Multi-Agent Swarm
+
+Coordinate specialized agents (Planner, Coder, Reviewer, Researcher, Tester):
+
+```bash
+agent swarm start "Build a REST API with auth"
+agent swarm status               # View agents & tasks
+agent swarm roles                # List available roles
+```
+
+### 🖥️ Desktop Automation
+
+Cross-platform desktop control (Linux, macOS, Windows):
+
+```bash
+agent desktop screenshot         # Capture screen
+agent desktop click 500 300      # Mouse click
+agent desktop type "Hello" --enter
+agent desktop hotkey ctrl+s      # Keyboard shortcut
+```
+
+### 🌈 Multimodal Interfaces
+
+Voice, vision, and speech powered by OpenAI:
+
+```bash
+agent multimodal transcribe audio.wav      # Whisper STT
+agent multimodal analyze image.png         # GPT-4o Vision
+agent multimodal speak "Done!"             # TTS
+```
+
 ### Lifecycle Hooks
 
 Intercept execution at 10 event points:
