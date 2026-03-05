@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { ToolDefinition } from '../types.js';
+import { getSandboxEngine } from '../../sandbox/engine.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -28,6 +29,34 @@ export const cmdRun: ToolDefinition<
     permissions: ['exec'],
     async execute(input, ctx) {
         const workDir = input.cwd ?? ctx.cwd;
+
+        // ─── Sandbox Mode ───
+        // If a sandbox engine is active, route the command through the Docker container
+        const sandbox = getSandboxEngine();
+        if (sandbox && sandbox.isActive) {
+            try {
+                const result = await sandbox.exec(input.command, input.args ?? [], {
+                    cwd: workDir,
+                    timeout: input.timeout,
+                    env: input.env,
+                });
+                return {
+                    success: result.exitCode === 0,
+                    data: result,
+                    durationMs: 0,
+                };
+            } catch (err) {
+                const error = err as { message?: string };
+                return {
+                    success: false,
+                    data: { stdout: '', stderr: error.message ?? 'Sandbox execution failed', exitCode: 1 },
+                    error: error.message ?? 'Sandbox execution failed',
+                    durationMs: 0,
+                };
+            }
+        }
+
+        // ─── Direct Host Execution ───
         try {
             const { stdout, stderr } = await execFileAsync(input.command, input.args ?? [], {
                 cwd: workDir,
@@ -58,3 +87,4 @@ export const cmdRun: ToolDefinition<
 };
 
 export const cmdTools = [cmdRun];
+

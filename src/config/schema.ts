@@ -119,6 +119,24 @@ const EmbeddingConfigSchema = z.object({
     apiVersion: z.string().optional(),
 });
 
+// ─── Sandbox Config ───
+const SandboxMountSchema = z.object({
+    hostPath: z.string(),
+    containerPath: z.string(),
+    readOnly: z.boolean().optional().default(false),
+});
+
+const SandboxConfigSchema = z.object({
+    enabled: z.boolean().default(false),
+    image: z.string().default('node:20-slim'),
+    timeout: z.number().default(60000),
+    mounts: z.array(SandboxMountSchema).default([
+        { hostPath: '.', containerPath: '/project', readOnly: false },
+    ]),
+    network: z.enum(['bridge', 'host', 'none']).default('bridge'),
+    autoDestroy: z.boolean().default(true),
+});
+
 // ─── Full Config ───
 export const AgentConfigSchema = z.object({
     $schema: z.string().optional(),
@@ -138,6 +156,7 @@ export const AgentConfigSchema = z.object({
     skills: SkillConfigSchema.default({}),
     daemon: DaemonConfigSchema.default({}),
     mcp: McpConfigSchema.default({}),
+    sandbox: SandboxConfigSchema.default({}),
 });
 
 export type AgentConfig = z.infer<typeof AgentConfigSchema>;

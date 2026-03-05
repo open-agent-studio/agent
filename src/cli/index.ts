@@ -16,6 +16,7 @@ import { createPluginsCommand } from './commands/plugins.js';
 import { createScriptsCommand } from './commands/scripts-cmd.js';
 import { createStudioCommand } from './commands/studio-cmd.js';
 import { createUpdateCommand } from './commands/update.js';
+import { createSandboxCommand } from './commands/sandbox.js';
 import { getAgentVersion } from '../utils/version.js';
 
 /**
@@ -51,6 +52,7 @@ export function createCLI(): Command {
     program.addCommand(createScriptsCommand());
     program.addCommand(createStudioCommand());
     program.addCommand(createUpdateCommand());
+    program.addCommand(createSandboxCommand());
 
     return program;
 }
