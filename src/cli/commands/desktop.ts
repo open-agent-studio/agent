@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { initDesktopEngine, getDesktopEngine } from '../../desktop/engine.js';
+import { initDesktopEngine } from '../../desktop/engine.js';
 
 export function createDesktopCommand(): Command {
     const cmd = new Command('desktop')

@@ -37,7 +37,7 @@ export class VoiceInput {
         });
 
         if (!res.ok) {
-            const err = await res.json();
+            const err = await res.json() as any;
             throw new Error(`Whisper API Error: ${err.error?.message || JSON.stringify(err)}`);
         }
 

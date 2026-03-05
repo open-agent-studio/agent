@@ -34,7 +34,7 @@ export class TextToSpeech {
         });
 
         if (!res.ok) {
-            const err = await res.json();
+            const err = await res.json() as any;
             throw new Error(`TTS API Error: ${err.error?.message || JSON.stringify(err)}`);
         }
 

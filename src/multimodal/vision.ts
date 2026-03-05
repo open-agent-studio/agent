@@ -53,7 +53,7 @@ export class VisionAnalyzer {
         });
 
         if (!res.ok) {
-            const err = await res.json();
+            const err = await res.json() as any;
             throw new Error(`Vision API Error: ${err.error?.message || JSON.stringify(err)}`);
         }
 
@@ -98,7 +98,7 @@ export class VisionAnalyzer {
         });
 
         if (!res.ok) {
-            const err = await res.json();
+            const err = await res.json() as any;
             throw new Error(`Vision API Error: ${err.error?.message || JSON.stringify(err)}`);
         }
 

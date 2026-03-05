@@ -98,4 +98,46 @@ export const DEFAULT_CONFIG: AgentConfig = {
             'fs.read', 'fs.search', 'git.diff', 'cmd.run',
         ],
     },
+    sandbox: {
+        enabled: false,
+        image: 'node:20-slim',
+        timeout: 60000,
+        network: 'bridge',
+        mounts: [],
+        autoDestroy: true,
+    },
+    swarm: {
+        enabled: false,
+        maxAgents: 5,
+        model: 'gpt-4o',
+        allowDelegation: true,
+        maxDelegationDepth: 3,
+        agentTimeout: 120000,
+    },
+    desktop: {
+        enabled: false,
+        screenshotFormat: 'png',
+        screenshotQuality: 100,
+        actionDelay: 100,
+        ocrEnabled: false,
+        tempDir: '/tmp/agent-desktop',
+    },
+    multimodal: {
+        enabled: false,
+        voice: {
+            model: 'whisper-1',
+            format: 'wav',
+        },
+        vision: {
+            model: 'gpt-4o',
+            detail: 'auto',
+            maxTokens: 1024,
+        },
+        tts: {
+            model: 'tts-1',
+            voice: 'alloy',
+            format: 'mp3',
+            speed: 1.0,
+        },
+    },
 };

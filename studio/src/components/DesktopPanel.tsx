@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
 export default function DesktopPanel() {
-    const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
     const [x, setX] = useState('');
     const [y, setY] = useState('');
     const [text, setText] = useState('');
@@ -15,7 +14,6 @@ export default function DesktopPanel() {
             const res = await fetch('/api/desktop/screenshot', { method: 'POST' });
             const data = await res.json();
             addLog(`Screenshot saved: ${data.path}`);
-            setScreenshotUrl(data.path);
         } catch (err) {
             addLog(`Error: ${(err as Error).message}`);
         }

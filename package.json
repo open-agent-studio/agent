@@ -1,9 +1,11 @@
 {
     "name": "@praveencs/agent",
-    "version": "0.9.30",
+    "version": "0.10.0",
     "files": [
         "dist",
         "bin",
+        "studio",
+        "agent-skills",
         "README.md",
         "ROADMAP.md",
         "docs",

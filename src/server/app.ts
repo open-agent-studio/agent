@@ -895,7 +895,7 @@ export function createStudioServer() {
         try {
             const { getSandboxEngine } = await import('../sandbox/engine.js');
             const engine = getSandboxEngine();
-            if (!engine) return res.json({ enabled: false, running: false, image: 'node:20-slim' });
+            if (!engine) { res.json({ enabled: false, running: false, image: 'node:20-slim' }); return; }
             const status = await engine.status();
             res.json(status);
         } catch (err) { res.status(500).json({ error: (err as Error).message }); }
@@ -926,7 +926,7 @@ export function createStudioServer() {
         try {
             const { getSwarmOrchestrator } = await import('../swarm/orchestrator.js');
             const orch = getSwarmOrchestrator();
-            if (!orch) return res.json({ swarmId: '', status: 'idle', agents: [], tasks: [] });
+            if (!orch) { res.json({ swarmId: '', status: 'idle', agents: [], tasks: [] }); return; }
             res.json(orch.getStatus());
         } catch (err) { res.status(500).json({ error: (err as Error).message }); }
     });

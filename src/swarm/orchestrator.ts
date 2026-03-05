@@ -4,7 +4,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { MessageBus } from './bus.js';
-import { getRole, BUILT_IN_ROLES } from './roles.js';
+import { getRole } from './roles.js';
 import type {
     SwarmConfig, SwarmState, SwarmAgent, AgentTask,
     AgentRole, SwarmMessage,
@@ -300,7 +300,7 @@ export class SwarmOrchestrator {
         }
     }
 
-    private handleAgentMessage(agentId: string, msg: SwarmMessage): void {
+    private handleAgentMessage(_agentId: string, msg: SwarmMessage): void {
         if (msg.type === 'task_result') {
             const { taskId, result } = msg.payload as { taskId: string; result: string };
             this.completeTask(taskId, result);
