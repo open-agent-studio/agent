@@ -253,7 +253,7 @@ export function createSkillsCommand(): Command {
             const installed = await loader.loadAll();
             // Removed the fallback URL, now directly uses config.skills?.registryUrl
             // const registryUrl = config.skills?.registryUrl ??
-            //     'https://raw.githubusercontent.com/praveencs87/agent-skills/main';
+            //     'https://raw.githubusercontent.com/open-agent-studio/agent-skills/main';
 
             if (installed.length === 0) {
                 console.log(chalk.yellow('\nNo skills installed to update.\n'));

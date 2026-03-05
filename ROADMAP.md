@@ -1,4 +1,4 @@
-# 🛣️ Roadmap: The Future of @praveencs/agent
+# 🛣️ Roadmap: The Future of @open-agent-studio/agent
 
 We have built a robust autonomous agent runtime (`v0.9.x`). Here is our progress on the major milestones.
 

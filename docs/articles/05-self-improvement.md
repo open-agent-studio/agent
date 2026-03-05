@@ -83,6 +83,6 @@ In **Part 7**, we'll build the **Interactive CLI**—a Claude Code-style convers
 - **Part 6**: Plugin Ecosystem (Hooks, Commands, Multi-CLI)
 - **Part 7**: Interactive CLI
 
-You can explore the full source code and contribute at [GitHub](https://github.com/praveencs87/agent).
+You can explore the full source code and contribute at [GitHub](https://github.com/open-agent-studio/agent).
 
 Happy Hacking!

@@ -169,4 +169,4 @@ The interactive CLI opens up new possibilities:
 6. **Plugin Ecosystem (Hooks, Commands, Multi-CLI)**
 7. **Interactive CLI (This Article)**
 
-Explore the source code at [GitHub](https://github.com/praveencs87/agent) or install with `npm i -g @praveencs/agent`.
+Explore the source code at [GitHub](https://github.com/open-agent-studio/agent) or install with `npm i -g @open-agent-studio/agent`.

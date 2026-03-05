@@ -37,7 +37,7 @@
 ### Installation
 
 ```bash
-npm install -g @praveencs/agent
+npm install -g @open-agent-studio/agent
 ```
 
 ### Initialize Your Project
@@ -464,7 +464,7 @@ my-plugin/
 
 ### Install and Manage
 
-Plugins can be installed locally from a path or remotely from the official **Agent Hub** (`praveencs87/agent-skills` repository).
+Plugins can be installed locally from a path or remotely from the official **Agent Hub** (`open-agent-studio/agent-skills` repository).
 
 ```bash
 # Install the official GitHub plugin from the Agent Hub

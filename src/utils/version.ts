@@ -12,7 +12,7 @@ try {
 }
 
 /**
- * Returns the current version of the @praveencs/agent package
+ * Returns the current version of the @open-agent-studio/agent package
  */
 export function getAgentVersion(): string {
     return agentVersion;

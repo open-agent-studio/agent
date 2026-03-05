@@ -37,9 +37,9 @@ export class RegistryClient {
     private pluginsUrl: string;
 
     constructor(config?: RegistryConfig) {
-        this.skillsUrl = config?.skillsUrl ?? 'https://raw.githubusercontent.com/praveencs87/agent-skills/main';
+        this.skillsUrl = config?.skillsUrl ?? 'https://raw.githubusercontent.com/open-agent-studio/agent-skills/main';
         // We are using the exact same repo for plugins now, just a different top-level folder
-        this.pluginsUrl = config?.pluginsUrl ?? 'https://raw.githubusercontent.com/praveencs87/agent-skills/main';
+        this.pluginsUrl = config?.pluginsUrl ?? 'https://raw.githubusercontent.com/open-agent-studio/agent-skills/main';
     }
 
     public async fetchJson(url: string): Promise<any> {

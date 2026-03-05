@@ -1,7 +1,7 @@
 import { exec } from 'node:child_process';
 import chalk from 'chalk';
 
-const PACKAGE_NAME = '@praveencs/agent';
+const PACKAGE_NAME = '@open-agent-studio/agent';
 
 /**
  * Check if a newer version of the agent CLI is available on npm.

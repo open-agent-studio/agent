@@ -2,11 +2,11 @@
 
 > **Your autonomous AI employee.** Give it a goal, walk away. It decomposes, executes, scripts, and learns — all by itself.
 
-[![npm version](https://img.shields.io/npm/v/@praveencs/agent)](https://www.npmjs.com/package/@praveencs/agent)
+[![npm version](https://img.shields.io/npm/v/@open-agent-studio/agent)](https://www.npmjs.com/package/@open-agent-studio/agent)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ```
-$ npm install -g @praveencs/agent
+$ npm install -g @open-agent-studio/agent
 $ agent init
 $ agent
 
@@ -47,7 +47,7 @@ Think of it as a **junior developer you can assign tasks to** and check on later
 ### 1. Install
 
 ```bash
-npm install -g @praveencs/agent
+npm install -g @open-agent-studio/agent
 ```
 
 ### 2. Initialize a project

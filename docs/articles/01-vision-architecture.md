@@ -9,7 +9,7 @@ This is the promise of **Autonomous Agents**. Unlike chatbots, agents have:
 4.  **Autonomy** (looping execution without constant prompts)
 5.  **Extensibility** (plugins, hooks, and commands to grow capabilities)
 
-In this 7-part series, we will break down exactly how we built `@praveencs/agent`, a powerful, open-source autonomous agent runtime.
+In this 7-part series, we will break down exactly how we built `@open-agent-studio/agent`, a powerful, open-source autonomous agent runtime.
 
 ## 🏗️ The Core Architecture
 

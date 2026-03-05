@@ -1,5 +1,5 @@
 {
-    "name": "@praveencs/agent",
+    "name": "@open-agent-studio/agent",
     "version": "0.10.0",
     "files": [
         "dist",
@@ -39,11 +39,11 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/praveencs87/agent.git"
+        "url": "git+https://github.com/open-agent-studio/agent.git"
     },
-    "homepage": "https://github.com/praveencs87/agent#readme",
+    "homepage": "https://github.com/open-agent-studio/agent#readme",
     "bugs": {
-        "url": "https://github.com/praveencs87/agent/issues"
+        "url": "https://github.com/open-agent-studio/agent/issues"
     },
     "engines": {
         "node": ">=18.0.0"
