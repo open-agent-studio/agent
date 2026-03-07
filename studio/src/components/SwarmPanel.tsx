@@ -25,6 +25,8 @@ const statusIcons: Record<string, string> = {
 export default function SwarmPanel() {
     const [status, setStatus] = useState<SwarmStatus | null>(null);
     const [loading, setLoading] = useState(true);
+    const [goalInput, setGoalInput] = useState('');
+    const [starting, setStarting] = useState(false);
 
     useEffect(() => {
         fetchStatus();
@@ -41,6 +43,25 @@ export default function SwarmPanel() {
             setStatus(null);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleStart = async () => {
+        if (!goalInput.trim()) return;
+        setStarting(true);
+        try {
+            const res = await fetch('/api/swarm/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ goal: goalInput.trim() }),
+            });
+            const data = await res.json();
+            setStatus(data);
+            setGoalInput('');
+        } catch (err) {
+            console.error('Failed to start swarm:', err);
+        } finally {
+            setStarting(false);
         }
     };
 
@@ -63,11 +84,33 @@ export default function SwarmPanel() {
             </div>
 
             {!status || status.status === 'idle' ? (
-                <div className="border border-white/10 border-dashed rounded-xl p-12 text-center bg-neutral-900/20">
-                    <p className="text-neutral-400 text-sm mb-3">No active swarm session.</p>
-                    <code className="text-xs bg-neutral-800 px-3 py-1.5 rounded text-neutral-300">
-                        agent swarm start "your goal"
-                    </code>
+                <div className="space-y-4">
+                    <div className="border border-white/10 rounded-xl bg-neutral-900/40 p-6">
+                        <h3 className="text-sm font-medium mb-3">Start a Swarm Session</h3>
+                        <p className="text-xs text-neutral-500 mb-4">
+                            Describe a complex goal and the swarm will decompose it into tasks,
+                            spawn specialized agents (planner, coder, reviewer), and coordinate execution.
+                        </p>
+                        <div className="flex gap-3">
+                            <input
+                                value={goalInput}
+                                onChange={e => setGoalInput(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleStart()}
+                                placeholder="e.g. Review src/ for security vulnerabilities"
+                                className="flex-1 bg-neutral-800 border border-white/10 rounded-lg px-4 py-2.5 text-sm placeholder-neutral-600 focus:border-indigo-500/40 focus:outline-none transition-colors"
+                            />
+                            <button
+                                onClick={handleStart}
+                                disabled={starting || !goalInput.trim()}
+                                className="px-5 py-2.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg text-sm font-medium hover:bg-indigo-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                {starting ? 'Starting...' : 'Start Swarm'}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="border border-white/5 rounded-xl bg-neutral-900/20 p-5 text-sm text-neutral-400">
+                        <p>Or start via CLI: <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-neutral-300 text-xs">agent swarm start "your goal"</code></p>
+                    </div>
                 </div>
             ) : (
                 <>
@@ -79,8 +122,8 @@ export default function SwarmPanel() {
                                 <div className="text-sm font-mono text-neutral-300 mt-0.5">{status.swarmId.slice(0, 12)}</div>
                             </div>
                             <div className={`px-3 py-1 rounded-full text-xs font-medium border ${status.status === 'running' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
-                                    status.status === 'completed' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
-                                        'text-neutral-400 bg-neutral-800 border-neutral-700'
+                                status.status === 'completed' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
+                                    'text-neutral-400 bg-neutral-800 border-neutral-700'
                                 }`}>
                                 {status.status}
                             </div>

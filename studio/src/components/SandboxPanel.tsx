@@ -6,11 +6,13 @@ interface SandboxStatus {
     image: string;
     containerId?: string;
     uptime?: number;
+    error?: string;
 }
 
 export default function SandboxPanel() {
     const [status, setStatus] = useState<SandboxStatus | null>(null);
     const [loading, setLoading] = useState(true);
+    const [actionError, setActionError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchStatus();
@@ -23,6 +25,7 @@ export default function SandboxPanel() {
             const res = await fetch('/api/sandbox/status');
             const data = await res.json();
             setStatus(data);
+            if (!data.error) setActionError(null);
         } catch {
             setStatus(null);
         } finally {
@@ -31,13 +34,32 @@ export default function SandboxPanel() {
     };
 
     const handleStart = async () => {
-        await fetch('/api/sandbox/start', { method: 'POST' });
-        fetchStatus();
+        setActionError(null);
+        try {
+            const res = await fetch('/api/sandbox/start', { method: 'POST' });
+            const data = await res.json();
+            if (data.error) {
+                if (data.error.includes('Docker') || data.error.includes('docker')) {
+                    setActionError('Docker is not available. Install Docker with: sudo snap install docker');
+                } else {
+                    setActionError(data.error);
+                }
+            } else {
+                fetchStatus();
+            }
+        } catch (err) {
+            setActionError((err as Error).message);
+        }
     };
 
     const handleStop = async () => {
-        await fetch('/api/sandbox/stop', { method: 'POST' });
-        fetchStatus();
+        setActionError(null);
+        try {
+            await fetch('/api/sandbox/stop', { method: 'POST' });
+            fetchStatus();
+        } catch (err) {
+            setActionError((err as Error).message);
+        }
     };
 
     const formatUptime = (ms: number) => {
@@ -61,6 +83,23 @@ export default function SandboxPanel() {
                     Run commands inside isolated Docker containers for safe execution.
                 </p>
             </div>
+
+            {/* Error Banner */}
+            {actionError && (
+                <div className="border border-red-500/20 rounded-xl bg-red-500/5 p-4 flex items-start gap-3">
+                    <span className="text-red-400 shrink-0">⚠️</span>
+                    <div>
+                        <p className="text-sm text-red-400">{actionError}</p>
+                        {actionError.includes('Docker') && (
+                            <div className="mt-2 text-xs text-neutral-500 space-y-1">
+                                <p>Install Docker:</p>
+                                <code className="block bg-neutral-800 px-2 py-1 rounded text-neutral-400">sudo snap install docker</code>
+                                <p className="mt-1">Or: <code className="bg-neutral-800 px-1 rounded text-neutral-400">sudo apt install docker.io</code></p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Status Card */}
             <div className="border border-white/10 rounded-xl bg-neutral-900/40 p-6">

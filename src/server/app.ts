@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import multer from 'multer';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { InstanceRegistry } from '../instance/registry.js';
@@ -931,6 +932,22 @@ export function createStudioServer() {
         } catch (err) { res.status(500).json({ error: (err as Error).message }); }
     });
 
+    app.post('/api/swarm/start', async (req, res) => {
+        try {
+            const { goal } = req.body;
+            if (!goal) { res.status(400).json({ error: 'Goal is required' }); return; }
+            const { initSwarmOrchestrator, getSwarmOrchestrator } = await import('../swarm/orchestrator.js');
+            // Stop any existing swarm
+            const existing = getSwarmOrchestrator();
+            if (existing && existing.isActive) { existing.stop(); }
+            const orch = initSwarmOrchestrator({ enabled: true });
+            // Run async — don't await, let it work in the background
+            orch.run(goal).catch(console.error);
+            // Return immediately with the initial status
+            res.json(orch.getStatus());
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
     app.post('/api/swarm/stop', async (_req, res) => {
         try {
             const { getSwarmOrchestrator } = await import('../swarm/orchestrator.js');
@@ -984,6 +1001,29 @@ export function createStudioServer() {
     // ═══════════════════════════════════════════════
     // MULTIMODAL API
     // ═══════════════════════════════════════════════
+    const upload = multer({ dest: '/tmp/agent-uploads/' });
+
+    app.post('/api/multimodal/transcribe', upload.single('audio'), async (req, res) => {
+        try {
+            if (!req.file) { res.status(400).json({ error: 'No audio file uploaded' }); return; }
+            const { initMultimodalEngine } = await import('../multimodal/engine.js');
+            const engine = initMultimodalEngine({ enabled: true });
+            const result = await engine.transcribe(req.file.path);
+            res.json(result);
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    app.post('/api/multimodal/analyze', upload.single('image'), async (req, res) => {
+        try {
+            if (!req.file) { res.status(400).json({ error: 'No image file uploaded' }); return; }
+            const prompt = req.body.prompt || 'Describe this image in detail.';
+            const { initMultimodalEngine } = await import('../multimodal/engine.js');
+            const engine = initMultimodalEngine({ enabled: true });
+            const result = await engine.analyzeImage(req.file.path, prompt);
+            res.json(result);
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
     app.post('/api/multimodal/speak', async (req, res) => {
         try {
             const { initMultimodalEngine } = await import('../multimodal/engine.js');

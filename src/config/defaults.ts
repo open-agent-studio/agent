@@ -76,7 +76,7 @@ export const DEFAULT_CONFIG: AgentConfig = {
     },
     skills: {
         installPaths: ['.agent/skills'],
-        registryUrl: 'https://raw.githubusercontent.com/open-agent-studio/agent-skills/main',
+        registryUrl: 'https://raw.githubusercontent.com/open-agent-studio/hub/main',
     },
     daemon: {
         timezone: 'UTC',
