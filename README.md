@@ -27,19 +27,20 @@ $ agent
 
 ## What Is This?
 
-Agent Runtime is a **fully autonomous AI coding agent** that runs on your machine. Unlike chat-based tools where you prompt-and-wait, this agent:
+Agent Runtime is your **personal, autonomous AI employee** that runs right on your computer.
 
-1. **Breaks down complex goals** into a dependency-aware task graph
-2. **Runs tasks in parallel** (up to 3 at once) with automatic retries
-3. **Creates scripts and files** autonomously — shell, Python, Node.js
-4. **Uses your credentials** securely from an encrypted vault
-5. **Re-plans on failure** — if a task fails, the LLM suggests alternatives
-6. **Remembers everything** — persistent SQLite memory across sessions
-7. **Tracks costs & notifies** — logs token usage/cost and sends Slack/email alerts
-8. **Has a web dashboard** — Agent Studio for visual management, locally or via remote URL
-9. **Persistent Sessions** — Pause an interactive chat and resume it any time natively
-10. **Swarm Delegation** — Offload tasks seamlessly to remote agents on different machines
-11. **MCP HTTP+SSE Support** — Serve files, memories, and skills as MCP Server Protocol endpoints over HTTP
+Have you ever used ChatGPT or Claude and felt annoyed that you have to constantly copy-paste code, fix silly mistakes, or do the actual computer work for them? Agent Runtime fixes that. 
+
+Instead of treating the AI like a chatbox, you treat it like an **intern**. You assign it a massive goal (like "Build a custom React dashboard" or "Write a python script that cleans up my hard drive"), and then you **walk away**. 
+
+Here is what the Agent does while you sleep:
+1. **Breaks your goal into steps** — it thinks about what needs to be done.
+2. **Types code by itself** — it creates HTML, Python, and Javascript files in your project directory.
+3. **Runs programs** — it executes terminal commands safely, installing its own dependencies if it needs them.
+4. **Checks its work** — if it breaks something or a script crashes, it literally stares at the error message, plans a fix, and tries again.
+5. **Teamwork (Swarms)** — doing a huge task? It will deploy a team of AI sub-workers (a coder, a reviewer) so they can collaborate together for you.
+6. **Remembers you** — close your laptop halfway through? All good. The built-in SQLite database remembers everything across sessions indefinitely.
+7. **Visually Stunning App** — want to see what it's thinking? Open Agent Studio's web dashboard and watch its glowing, real-time matrix terminal work.
 
 Think of it as a **junior developer you can assign tasks to** and check on later.
 
