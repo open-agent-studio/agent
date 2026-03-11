@@ -129,6 +129,17 @@ export class LLMRouter {
     }
 
     /**
+     * Simple text generation without tools — convenience wrapper
+     */
+    async generateText(prompt: string, options: { temperature?: number } = {}): Promise<string> {
+        const response = await this.chat({
+            messages: [{ role: 'user', content: prompt }],
+            temperature: options.temperature
+        });
+        return response.content;
+    }
+
+    /**
      * Check which providers are available
      */
     async getAvailableProviders(): Promise<string[]> {
@@ -149,14 +160,27 @@ export class LLMRouter {
     }
 
     /**
-     * Simple text generation without tools — convenience wrapper
+     * Generate an embedding vector for a given text string.
+     * Routes to the first available provider that supports embeddings.
      */
-    async generateText(prompt: string, options: { temperature?: number } = {}): Promise<string> {
-        const response = await this.chat({
-            messages: [{ role: 'user', content: prompt }],
-            temperature: options.temperature ?? 0.7,
-        });
-        return response.content || '';
+    async generateEmbedding(text: string): Promise<number[]> {
+        const chain = this.config.models.routing.offlineFirst
+            ? this.getOfflineFirstChain()
+            : this.config.models.routing.fallbackChain;
+
+        for (const providerName of chain) {
+            const provider = this.providers.get(providerName);
+            if (provider && provider.generateEmbedding && await provider.isAvailable()) {
+                try {
+                    return await provider.generateEmbedding(text);
+                } catch (err) {
+                    console.warn(`[LLM] Provider ${providerName} failed to generate embedding: ${(err as Error).message}`);
+                    // Continue to next provider on failure
+                }
+            }
+        }
+
+        throw new Error(`No LLM provider available that supports embeddings.\nTried: ${chain.join(', ')}`);
     }
 
     // ─── Private ───

@@ -44,5 +44,6 @@ export interface LLMResponse {
 export interface LLMProvider {
     name: string;
     chat(request: LLMRequest): Promise<LLMResponse>;
+    generateEmbedding?(text: string): Promise<number[]>;
     isAvailable(): Promise<boolean>;
 }

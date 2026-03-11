@@ -30,9 +30,9 @@ export async function createMcpHandlers(config: AgentConfig) {
     const skillLoader = new SkillLoader(config);
     const llmRouter = new LLMRouter(config);
     const skillRunner = new SkillRunner(registry, policy, llmRouter);
-    const engine = new ExecutionEngine(registry, policy, skillLoader, skillRunner);
+    const engine = new ExecutionEngine(registry, llmRouter, policy, skillLoader, skillRunner);
     const planParser = new PlanParser();
-    const planRunner = new PlanRunner(engine);
+    const planRunner = new PlanRunner(engine, llmRouter);
 
     await skillLoader.loadAll();
 

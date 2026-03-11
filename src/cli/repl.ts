@@ -21,6 +21,8 @@ import type { ExecutionContext } from '../tools/types.js';
 import { io, type Socket } from 'socket.io-client';
 import { checkForUpdates } from './updater.js';
 import { getAgentVersion } from '../utils/version.js';
+import { EpisodicMemory } from '../memory/episodic.js';
+import { getRunsDir } from '../utils/paths.js';
 
 /**
  * Interactive REPL — the heart of the Claude Code-style experience
@@ -318,10 +320,36 @@ async function executeGoal(
         );
     }
 
+    // ─── Episodic Memory Retrieval ───
+    let memoryContext = '';
+    try {
+        const memoryDir = getRunsDir();
+        const memory = EpisodicMemory.open(memoryDir);
+
+        // Suppress missing provider errors if embeddings aren't configured
+        const userEmbedding = await llmRouter.generateEmbedding(userMessage).catch(() => null);
+
+        if (userEmbedding) {
+            const similar = memory.searchSimilar(userEmbedding, 3);
+            if (similar.length > 0) {
+                memoryContext = '\n\n### RELEVANT PAST EXPERIENCES (EPISODIC MEMORY) ###\n' +
+                    'The following are successful executions of similar tasks from the past. ' +
+                    'Analyze their tool usage and apply the same patterns if applicable:\n' +
+                    similar.map(s => `- Intent: ${s.episode.intent}\n  Execution History:\n  ${s.episode.execution_history}`).join('\n\n');
+            }
+        }
+        memory.close();
+    } catch (e) {
+        // Soft fail if memory isn't available
+    }
+
     // Add user message to conversation
     conversation.addUser(userMessage);
-    const messages = systemOverride
-        ? [{ role: 'system' as const, content: systemOverride }, ...conversation.getMessages().slice(1)]
+
+    const mergedSystem = (systemOverride || '') + memoryContext;
+
+    const messages = mergedSystem
+        ? [{ role: 'system' as const, content: mergedSystem }, ...conversation.getMessages().slice(1)]
         : conversation.getMessages();
 
     spinner.start('Thinking...');
@@ -419,6 +447,40 @@ async function executeGoal(
             }
 
             renderSummary('Done', Date.now() - start);
+
+            // ─── Episodic Memory Storage ───
+            // Only save if we actually did something (more than just the initial system + user messages)
+            const newMessages = conversation.getMessages().slice(2);
+            if (newMessages.some(m => m.role === 'tool' || m.toolCalls)) {
+                try {
+                    // Extract what tools were called and what the final AI summary was
+                    const executionHistory = newMessages.map(m => {
+                        if (m.role === 'assistant' && m.toolCalls) {
+                            return m.toolCalls.map(tc => `Tool ${tc.name}(${JSON.stringify(tc.args)})`).join(', ');
+                        } else if (m.role === 'tool') {
+                            // truncate really long contents to save space
+                            return `Result: ${m.content.length > 500 ? m.content.substring(0, 500) + '...' : m.content}`;
+                        } else if (m.role === 'assistant' && m.content) {
+                            return `Final: ${m.content}`;
+                        }
+                        return '';
+                    }).filter(s => s).join('\n');
+
+                    // Let's generate an embedding. If it fails, we just don't save the memory (e.g. offline provider)
+                    const userEmbedding = await llmRouter.generateEmbedding(userMessage).catch(() => null);
+
+                    if (userEmbedding) {
+                        const memoryDir = getRunsDir();
+                        const memory = EpisodicMemory.open(memoryDir);
+                        memory.saveEpisode(userMessage, executionHistory, userEmbedding);
+                        memory.close();
+                        ctx.onProgress?.(`Saved execution to Episodic Memory for future recall.`);
+                    }
+                } catch (e) {
+                    // Soft fail if memory writing fails
+                }
+            }
+
             break;
         }
     }

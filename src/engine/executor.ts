@@ -11,6 +11,8 @@ import { auditEmitter, AuditEventType } from '../policy/audit.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { access } from 'node:fs/promises';
+import { AgentEvaluator } from './evaluator.js';
+import type { LLMRouter } from '../llm/router.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -27,25 +29,30 @@ const execFileAsync = promisify(execFile);
  */
 export class ExecutionEngine {
     private registry: ToolRegistry;
+    private router: LLMRouter;
     private policy: PolicyEngine;
     private skillLoader: SkillLoader;
     private skillRunner: SkillRunner;
     private rollback: RollbackTracker;
     private hooks?: HookRegistry;
+    private evaluator: AgentEvaluator;
 
     constructor(
         registry: ToolRegistry,
+        router: LLMRouter,
         policy: PolicyEngine,
         skillLoader: SkillLoader,
         skillRunner: SkillRunner,
         hooks?: HookRegistry
     ) {
         this.registry = registry;
+        this.router = router;
         this.policy = policy;
         this.skillLoader = skillLoader;
         this.skillRunner = skillRunner;
         this.rollback = new RollbackTracker();
         this.hooks = hooks;
+        this.evaluator = new AgentEvaluator(this.router);
     }
 
     /**
@@ -74,6 +81,23 @@ export class ExecutionEngine {
                     error: `Step "${step.id}" has neither skill nor tool defined`,
                     durationMs: Date.now() - start,
                 };
+            }
+
+            // Phase 4: Self-Reflection / Evaluation
+            // If the tool didn't crash outright, let the critic grade the semantic outcome
+            if (result.success && (step.skill || step.tool)) {
+                try {
+                    const evalResult = await this.evaluator.evaluateStep(step, result);
+                    if (!evalResult.success) {
+                        result.success = false;
+                        result.error = `Critic Evaluation Failed (Confidence: ${evalResult.confidence}/10): ${evalResult.feedback}`;
+                    } else if (evalResult.feedback) {
+                        // Attach positive feedback to output for context
+                        result.output = `${result.output ? JSON.stringify(result.output) + '\n' : ''}[Critic: ${evalResult.feedback}]`;
+                    }
+                } catch (evalErr) {
+                    console.warn('[ExecutionEngine] Evaluator failed, continuing with raw tool result', evalErr);
+                }
             }
 
             return { ...result, durationMs: Date.now() - start };

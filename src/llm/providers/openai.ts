@@ -91,6 +91,21 @@ export class OpenAIProvider implements LLMProvider {
         };
     }
 
+    async generateEmbedding(text: string): Promise<number[]> {
+        const { default: OpenAI } = await import('openai');
+        const client = new OpenAI({
+            apiKey: this.config.apiKey ?? process.env['OPENAI_API_KEY'],
+            baseURL: this.config.baseUrl,
+        });
+
+        const response = await client.embeddings.create({
+            model: 'text-embedding-3-small',
+            input: text,
+        });
+
+        return response.data[0].embedding;
+    }
+
     async isAvailable(): Promise<boolean> {
         const key = this.config.apiKey ?? process.env['OPENAI_API_KEY'];
         return !!key;

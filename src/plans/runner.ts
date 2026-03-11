@@ -5,6 +5,8 @@ import { AuditLogger } from '../logging/audit-log.js';
 import { auditEmitter, AuditEventType } from '../policy/audit.js';
 import { generateRunId } from '../utils/paths.js';
 import type { HookRegistry } from '../hooks/registry.js';
+import { PlanCorrector } from './corrector.js';
+import type { LLMRouter } from '../llm/router.js';
 
 /**
  * Plan runner — executes plan steps sequentially
@@ -12,10 +14,12 @@ import type { HookRegistry } from '../hooks/registry.js';
 export class PlanRunner {
     private engine: ExecutionEngine;
     private hooks?: HookRegistry;
+    private corrector: PlanCorrector;
 
-    constructor(engine: ExecutionEngine, hooks?: HookRegistry) {
+    constructor(engine: ExecutionEngine, router: LLMRouter, hooks?: HookRegistry) {
         this.engine = engine;
         this.hooks = hooks;
+        this.corrector = new PlanCorrector(router);
     }
 
     /**
@@ -142,7 +146,7 @@ export class PlanRunner {
                     const action = step.onFailure ?? 'abort';
 
                     if (action === 'retry' && (step.retries ?? 0) > 0) {
-                        // Retry logic
+                        // existing retry logic
                         let retried = false;
                         for (let attempt = 1; attempt <= (step.retries ?? 0); attempt++) {
                             ctx.onProgress?.(`Retrying step ${step.id} (attempt ${attempt}/${step.retries})`);
@@ -155,10 +159,35 @@ export class PlanRunner {
                                 break;
                             }
                         }
-                        if (!retried) {
-                            planRun.status = 'failed';
-                            break;
-                        }
+                        if (retried) continue;
+                    }
+
+                    // OODA Loop: If not retried or retries failed, attempt dynamic recovery before aborting
+                    ctx.onProgress?.(`Step failed. Analyzing failure and planning recovery for ${step.name}...`);
+
+                    const recoverySteps = await this.corrector.generateCorrections(
+                        step,
+                        stepRun.error || 'Unknown error',
+                        {} // Extend with actual agent context/memory if needed
+                    );
+
+                    if (recoverySteps && recoverySteps.length > 0) {
+                        ctx.onProgress?.(`Generated ${recoverySteps.length} recovery steps. Splicing into plan.`);
+
+                        // Insert new steps into the plan
+                        const currentIndex = plan.steps.findIndex(s => s.id === step.id);
+                        plan.steps.splice(currentIndex + 1, 0, ...recoverySteps);
+
+                        // Also update the running state tracker
+                        const newStepRuns = recoverySteps.map(s => ({
+                            stepId: s.id,
+                            status: 'pending' as const,
+                        }));
+                        planRun.steps.splice(currentIndex + 1, 0, ...newStepRuns);
+
+                        // Give them a chance to fix it, but don't mark current as success
+                        // We will proceed to the newly injected steps
+                        continue;
                     } else if (action === 'abort') {
                         planRun.status = 'failed';
                         break;

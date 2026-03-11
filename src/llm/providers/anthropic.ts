@@ -104,6 +104,10 @@ export class AnthropicProvider implements LLMProvider {
         };
     }
 
+    async generateEmbedding(_text: string): Promise<number[]> {
+        throw new Error('Embeddings are not yet supported for Anthropic. Please use OpenAI.');
+    }
+
     async isAvailable(): Promise<boolean> {
         const key = this.config.apiKey ?? process.env['ANTHROPIC_API_KEY'];
         return !!key;

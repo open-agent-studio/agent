@@ -1,6 +1,6 @@
 {
     "name": "@open-agent-studio/agent",
-    "version": "0.10.0",
+    "version": "0.10.1",
     "files": [
         "dist",
         "bin",
@@ -88,6 +88,7 @@
         "jest": "^29.7.0",
         "prettier": "^3.4.2",
         "ts-jest": "^29.2.5",
+        "ts-node": "^10.9.2",
         "tsx": "^4.19.2",
         "typescript": "^5.7.3"
     }
