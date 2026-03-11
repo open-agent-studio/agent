@@ -148,11 +148,25 @@ export class MemoryStore {
                 created_at DATETIME DEFAULT (datetime('now'))
             );
 
+            -- Sessions table
+            CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY,
+                name TEXT,
+                messages TEXT NOT NULL,
+                system_prompt TEXT NOT NULL,
+                turn_count INTEGER DEFAULT 0,
+                status TEXT DEFAULT 'active'
+                    CHECK(status IN ('active','archived')),
+                created_at DATETIME DEFAULT (datetime('now')),
+                updated_at DATETIME DEFAULT (datetime('now'))
+            );
+
             -- Indexes
             CREATE INDEX IF NOT EXISTS idx_goals_status ON goals(status);
             CREATE INDEX IF NOT EXISTS idx_tasks_goal ON tasks(goal_id);
             CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
             CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_events(entity_type, entity_id);
+            CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions(updated_at DESC);
 
             -- Skill Metrics table
             CREATE TABLE IF NOT EXISTS skill_metrics (

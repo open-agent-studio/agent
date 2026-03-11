@@ -101,6 +101,30 @@ export function createSwarmCommand(): Command {
             console.log(chalk.green('✓ Swarm session stopped.'));
         });
 
+    // ─── swarm add-remote ───
+    cmd.command('add-remote')
+        .description('Add a remote agent to the active swarm')
+        .argument('<url>', 'URL of the remote Agent Studio instance (e.g. http://localhost:3334)')
+        .argument('<role>', 'Role of the remote agent (e.g. coder, reviewer)')
+        .option('-n, --name <name>', 'Name of the remote agent', 'Remote Worker')
+        .option('-k, --key <key>', 'API key for the remote instance')
+        .action((url, role, opts) => {
+            const orchestrator = getSwarmOrchestrator();
+            if (!orchestrator) {
+                console.log(chalk.yellow('No active swarm session. Start one first with `agent swarm start`.'));
+                return;
+            }
+
+            try {
+                const agent = orchestrator.addRemoteAgent(url, role as any, opts.name, opts.key);
+                console.log(chalk.green(`\n  ✓ Added remote agent ${agent.name} [${agent.id.slice(0, 16)}]`));
+                console.log(chalk.dim(`    URL:  ${url}`));
+                console.log(chalk.dim(`    Role: ${role}\n`));
+            } catch (err) {
+                console.error(chalk.red(`\n  ✗ Failed to add remote agent: ${(err as Error).message}\n`));
+            }
+        });
+
     // ─── swarm roles ───
     cmd.command('roles')
         .description('List available agent roles')

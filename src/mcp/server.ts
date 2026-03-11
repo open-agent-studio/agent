@@ -3,9 +3,18 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
     CallToolRequestSchema,
     ListToolsRequestSchema,
+    ListResourcesRequestSchema,
+    ReadResourceRequestSchema,
+    ListResourceTemplatesRequestSchema,
+    ListPromptsRequestSchema,
+    GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import express from 'express';
 import type { AgentConfig } from '../config/schema.js';
 import { createMcpHandlers } from './handlers.js';
+import { McpResourceManager } from './resources.js';
+import { McpPromptManager } from './prompts.js';
 import type { McpServerOptions } from './types.js';
 
 /**
@@ -24,6 +33,8 @@ export async function startMcpServer(
         {
             capabilities: {
                 tools: {},
+                resources: {},
+                prompts: {},
             },
         }
     );
@@ -43,12 +54,64 @@ export async function startMcpServer(
         return handlers.handleToolCall(name, args ?? {});
     });
 
+    // ─── Resources ───
+    const resourceManager = new McpResourceManager();
+
+    server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+        return {
+            resourceTemplates: await resourceManager.getResourceTemplates()
+        };
+    });
+
+    server.setRequestHandler(ListResourcesRequestSchema, async () => {
+        return {
+            resources: await resourceManager.listResources()
+        };
+    });
+
+    server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+        return await resourceManager.readResource(request.params.uri);
+    });
+
+    // ─── Prompts ───
+    const promptManager = new McpPromptManager(config);
+    await promptManager.init();
+
+    server.setRequestHandler(ListPromptsRequestSchema, async () => {
+        return {
+            prompts: promptManager.getPrompts()
+        };
+    });
+
+    server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+        return await promptManager.getPrompt(request.params.name, request.params.arguments as any);
+    });
+
     if (options.mode === 'stdio') {
         const transport = new StdioServerTransport();
         await server.connect(transport);
     } else if (options.mode === 'http') {
-        // HTTP mode will use SSE transport (Phase 2)
-        console.error('HTTP transport not yet implemented. Use --stdio mode.');
-        process.exit(1);
+        const app = express();
+        const port = options.port || 3001;
+
+        // Disable body-parser for SSE incoming messages, as SSE transport handles the body stream
+        let transport: SSEServerTransport;
+
+        app.get('/sse', async (_req, res) => {
+            transport = new SSEServerTransport('/message', res);
+            await server.connect(transport);
+        });
+
+        app.post('/message', async (req, res) => {
+            if (transport) {
+                await transport.handlePostMessage(req, res);
+            } else {
+                res.status(503).send('SSE not initialized');
+            }
+        });
+
+        app.listen(port, () => {
+            console.log(`[MCP] HTTP Server running on http://localhost:${port}/sse`);
+        });
     }
 }

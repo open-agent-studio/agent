@@ -8,7 +8,7 @@ try {
     agentVersion = pkg.version;
 } catch {
     // Fallback if package.json is stripped or inaccessible
-    agentVersion = '0.10.1';
+    agentVersion = '0.11.0';
 }
 
 /**

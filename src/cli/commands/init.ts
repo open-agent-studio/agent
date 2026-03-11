@@ -10,6 +10,7 @@ import { cmdTools } from '../../tools/core/cmd.js';
 import { gitTools } from '../../tools/core/git.js';
 import { projectTools } from '../../tools/core/project.js';
 import { cliTools } from '../../tools/core/cli-tools.js';
+import { browserTools } from '../../tools/core/browser.js';
 import type { ToolDefinition } from '../../tools/types.js';
 
 /**
@@ -22,6 +23,7 @@ export function registerCoreTools(registry: ToolRegistry): void {
         ...gitTools as ToolDefinition[],
         ...projectTools as ToolDefinition[],
         ...cliTools as ToolDefinition[],
+        ...browserTools as ToolDefinition[],
     ];
 
     for (const tool of allTools) {
@@ -99,6 +101,7 @@ export function createInitCommand(): Command {
                         { name: 'Git (git.*)', value: 'git.*', checked: true },
                         { name: 'Project Info (project.*)', value: 'project.*', checked: true },
                         { name: 'CLI Tools (cli.*) [AI wrappers]', value: 'cli.*', checked: true },
+                        { name: 'Browser Automation (desktop.browser.*)', value: 'desktop.browser.*', checked: true },
                     ]
                 },
                 {

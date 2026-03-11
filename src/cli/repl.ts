@@ -23,6 +23,7 @@ import { checkForUpdates } from './updater.js';
 import { getAgentVersion } from '../utils/version.js';
 import { EpisodicMemory } from '../memory/episodic.js';
 import { getRunsDir } from '../utils/paths.js';
+import { SessionStore } from '../session/session-store.js';
 
 /**
  * Interactive REPL — the heart of the Claude Code-style experience
@@ -126,7 +127,22 @@ INSTRUCTIONS:
 6. If the user asks a question that doesn't require tool use, just answer directly.`;
 
     // ─── Initialize conversation and slash commands ───
-    const conversation = new ConversationManager(systemPrompt);
+    const sessionStore = new SessionStore(process.cwd());
+    let conversation: ConversationManager;
+
+    if (process.env.AGENT_RESUME_SESSION) {
+        const loaded = ConversationManager.load(sessionStore, process.env.AGENT_RESUME_SESSION);
+        if (loaded) {
+            conversation = loaded;
+            console.log(chalk.dim(`\n  [Restored previous session with ${conversation.turns} turns]\n`));
+        } else {
+            conversation = new ConversationManager(systemPrompt, sessionStore);
+            console.log(chalk.yellow(`\n  [Warning: Session '${process.env.AGENT_RESUME_SESSION}' not found, starting new session]\n`));
+        }
+    } else {
+        conversation = new ConversationManager(systemPrompt, sessionStore);
+    }
+
     const slashCommands = new SlashCommandRegistry();
     const slashCtx = { config, skillLoader, commandLoader, hookRegistry, llmRouter, scriptLoader };
     const spinner = new Spinner();

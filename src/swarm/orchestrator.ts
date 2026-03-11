@@ -5,6 +5,7 @@
 import { randomUUID } from 'node:crypto';
 import { MessageBus } from './bus.js';
 import { getRole } from './roles.js';
+import { RemoteAgentBridge } from './remote-agent.js';
 import type {
     SwarmConfig, SwarmState, SwarmAgent, AgentTask,
     AgentRole, SwarmMessage,
@@ -16,6 +17,7 @@ export class SwarmOrchestrator {
     private bus: MessageBus;
     private state: SwarmState;
     private taskCallbacks: Map<string, (result: string) => void> = new Map();
+    private remoteAgents: Map<string, RemoteAgentBridge> = new Map();
 
     constructor(config?: Partial<SwarmConfig>) {
         this.config = { ...DEFAULT_SWARM_CONFIG, ...config };
@@ -113,6 +115,23 @@ export class SwarmOrchestrator {
     }
 
     /**
+     * Add a remote agent to the swarm.
+     */
+    addRemoteAgent(url: string, role: AgentRole, name: string, key?: string): SwarmAgent {
+        if (this.state.agents.length >= this.config.maxAgents) {
+            throw new Error(`Max agents (${this.config.maxAgents}) reached. Increase swarm.maxAgents in config.`);
+        }
+
+        const bridge = new RemoteAgentBridge(url, role, name, key);
+        this.remoteAgents.set(bridge.agentInfo.id, bridge);
+        this.state.agents.push(bridge.agentInfo);
+
+        // We don't subscribe to the bus for incoming messages because 
+        // the RemoteAgentBridge is a facade we invoke directly when assigned a task.
+        return bridge.agentInfo;
+    }
+
+    /**
      * Create a task and add it to the task queue.
      */
     createTask(opts: {
@@ -146,6 +165,18 @@ export class SwarmOrchestrator {
         task.status = 'running';
         agent.status = 'busy';
         agent.currentTask = taskId;
+
+        const remoteBridge = this.remoteAgents.get(agentId);
+        if (remoteBridge) {
+            // Task assigned to remote agent: execute in background
+            remoteBridge.executeTask(task, (msg) => {
+                this.bus.send(agentId, 'orchestrator', 'status_update', { taskId, status: msg });
+            }).then(result => {
+                this.completeTask(taskId, result);
+            }).catch(err => {
+                this.failTask(taskId, err.message);
+            });
+        }
 
         this.bus.send('orchestrator', agentId, 'task_assign', {
             taskId: task.id,

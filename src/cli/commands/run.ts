@@ -9,7 +9,9 @@ import { LLMRouter } from '../../llm/router.js';
 import { CommandLoader } from '../../commands/loader.js';
 import { ScriptLoader } from '../../scripts/loader.js';
 import { ScriptRunner } from '../../scripts/runner.js';
+import { SessionStore } from '../../session/session-store.js';
 import { registerCoreTools } from './init.js';
+import { ConversationManager } from '../conversation.js';
 import { promptApproval } from '../ui/prompt.js';
 import { progress } from '../ui/progress.js';
 import { generateRunId } from '../../utils/paths.js';
@@ -24,9 +26,111 @@ export function createRunCommand(): Command {
         .option('-s, --skill <skillName>', 'Use a specific skill')
         .option('-a, --autonomous', 'Run in autonomous mode (auto-approve low-risk actions)')
         .option('--dry-run', 'Show what would be done without executing')
-        .action(async (goal: string, options: { skill?: string; autonomous?: boolean; dryRun?: boolean }) => {
+        .option('--remote <url>', 'Run the agent remotely on a daemon/cloud server (e.g. http://localhost:3333)')
+        .option('--remote-key <key>', 'API key for the remote Agent Studio instance')
+        .option('--session <id>', 'Resume an existing session by ID')
+        .option('--session-name <name>', 'Assign a name to the new session')
+        .action(async (goal: string, options: { skill?: string; autonomous?: boolean; dryRun?: boolean; remote?: string; remoteKey?: string; session?: string; sessionName?: string }) => {
             const configLoader = new ConfigLoader();
             const config = await configLoader.load();
+
+            // ─── Remote Execution Mode ───
+            if (options.remote) {
+                progress.start(`Connecting to remote agent: ${options.remote}`, 1);
+                progress.step('Sending goal to daemon...');
+
+                try {
+                    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                    if (options.remoteKey) {
+                        headers['Authorization'] = `Bearer ${options.remoteKey}`;
+                    }
+
+                    const response = await fetch(`${options.remote.replace(/\/$/, '')}/api/execute`, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({ goal })
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json().catch(() => ({})) as any;
+                        throw new Error(err.error || `HTTP ${response.status} ${response.statusText}`);
+                    }
+
+                    if (!response.body) throw new Error('No response body from remote server');
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        buffer += decoder.decode(value, { stream: true });
+                        let newlineIndex;
+                        while ((newlineIndex = buffer.indexOf('\n\n')) >= 0) {
+                            const chunk = buffer.slice(0, newlineIndex);
+                            buffer = buffer.slice(newlineIndex + 2);
+
+                            const lines = chunk.split('\n');
+                            const eventLine = lines.find(l => l.startsWith('event:'));
+                            const dataLine = lines.find(l => l.startsWith('data:'));
+
+                            if (eventLine && dataLine) {
+                                const eventType = eventLine.replace('event: ', '').trim();
+                                const dataStr = dataLine.replace('data: ', '').trim();
+
+                                try {
+                                    const parsed = JSON.parse(dataStr);
+                                    if (eventType === 'progress') {
+                                        progress.info(parsed.message);
+                                    } else if (eventType === 'success') {
+                                        progress.info(chalk.green(parsed.message));
+                                    } else if (eventType === 'warning') {
+                                        progress.warning(parsed.message);
+                                    } else if (eventType === 'error') {
+                                        progress.error(parsed.message);
+                                        process.exit(1);
+                                    } else if (eventType === 'done') {
+                                        progress.success('Remote goal completed');
+                                        console.log(chalk.dim('\nResult:'));
+                                        console.log(parsed.result);
+                                        process.exit(0);
+                                    }
+                                } catch (e) {
+                                    // ignore parse errors for chunks
+                                }
+                            }
+                        }
+                    }
+                    progress.success('Remote execution connection closed');
+                    process.exit(0);
+                } catch (err) {
+                    progress.error(`Remote execution failed: ${(err as Error).message}`);
+                    process.exit(1);
+                }
+                // ─── Local Execution Mode ───
+                return;
+            }
+
+            const sessionStore = new SessionStore(process.cwd());
+            let conversation: ConversationManager;
+
+            const plannerPrompt = `You are an autonomous AI agent that accomplishes tasks using available tools.
+Keep responses concise and actionable. When the task is complete, use a final message to summarize what you did.`;
+
+            if (options.session) {
+                const loaded = ConversationManager.load(sessionStore, options.session);
+                if (!loaded) {
+                    console.error(chalk.red(`✗ Session '${options.session}' not found.`));
+                    process.exit(1);
+                }
+                conversation = loaded;
+                conversation.addUser(goal); // append the new goal
+            } else {
+                conversation = new ConversationManager(plannerPrompt, sessionStore, undefined, options.sessionName);
+                conversation.addUser(goal);
+            }
 
             const registry = ToolRegistry.getInstance();
             registerCoreTools(registry);

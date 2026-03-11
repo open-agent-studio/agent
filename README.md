@@ -10,7 +10,7 @@ $ npm install -g @open-agent-studio/agent
 $ agent init
 $ agent
 
-  🤖 Agent Runtime v0.9.25
+  🤖 Agent Runtime v0.11.0
   > Build a system health dashboard with monitoring scripts
 
   🧠 Decomposing into 5 subtasks...
@@ -37,6 +37,9 @@ Agent Runtime is a **fully autonomous AI coding agent** that runs on your machin
 6. **Remembers everything** — persistent SQLite memory across sessions
 7. **Tracks costs & notifies** — logs token usage/cost and sends Slack/email alerts
 8. **Has a web dashboard** — Agent Studio for visual management, locally or via remote URL
+9. **Persistent Sessions** — Pause an interactive chat and resume it any time natively
+10. **Swarm Delegation** — Offload tasks seamlessly to remote agents on different machines
+11. **MCP HTTP+SSE Support** — Serve files, memories, and skills as MCP Server Protocol endpoints over HTTP
 
 Think of it as a **junior developer you can assign tasks to** and check on later.
 
@@ -79,6 +82,9 @@ agent
 # Or one-shot command
 agent run "Add input validation to the signup form"
 
+# Run remotely on a cloud server
+agent run "Add input validation" --remote http://server:3333
+
 # Or start the background daemon
 agent daemon start
 ```
@@ -120,6 +126,10 @@ The agent has access to these tools when executing tasks:
 | `command.execute` | Run pre-defined command workflows |
 | `notify.send` | Send alerts via webhook, email, or log |
 | `cost.summary` | Get token usage and cost tracking |
+| `desktop.browser.open` | Open a URL in the agent's Playwright browser |
+| `desktop.browser.scrape` | Extract text/HTML from a web page |
+| `desktop.browser.click` / `fill` | Interact with web page elements |
+| `desktop.browser.screenshot` | Capture a PNG screenshot of the current page |
 
 ---
 
@@ -363,6 +373,44 @@ agent multimodal analyze image.png         # GPT-4o Vision
 agent multimodal speak "Done!"             # TTS
 ```
 
+### 🌐 Browser Automation (Playwright)
+
+Built-in headless browser control with session persistence:
+
+```bash
+# Setup (one-time)
+npx playwright install chromium
+
+# The agent uses browser tools automatically:
+agent run "Open https://example.com and scrape the heading"
+agent run "Log into dashboard and download the monthly report"
+```
+
+| Tool | What It Does |
+|------|--------------|
+| `desktop.browser.open` | Navigate to a URL (headless by default) |
+| `desktop.browser.click` | Click elements by CSS/XPath selector |
+| `desktop.browser.fill` | Type into input fields |
+| `desktop.browser.scrape` | Extract text or HTML from the page |
+| `desktop.browser.screenshot` | Capture a PNG screenshot |
+| `desktop.browser.close` | Close browser and persist session |
+
+**Session Persistence** — Cookies and localStorage are saved to `.agent/browser-session.json` on close and restored on next open, so the agent stays authenticated across runs.
+
+### ☁️ Remote Execution (Agent Cloud)
+
+Offload heavy LLM inference to a remote server while streaming output to your local terminal:
+
+```bash
+# On the remote server / cloud VM:
+agent studio --port 3333
+
+# On your local machine:
+agent run "Summarize the entire codebase" --remote http://server:3333
+```
+
+Uses **Server-Sent Events (SSE)** via `POST /api/execute` — progress, warnings, and results stream back in real-time.
+
 ### Lifecycle Hooks
 
 Intercept execution at 10 event points:
@@ -427,9 +475,10 @@ agent
 │  prompt  │   .md    │  .yaml   │   bundles               │
 ├──────────┴──────────┴──────────┴────────────────────────┤
 │          Tool Registry & Policy Engine                    │
-│  fs.* │ cmd.run │ git.* │ http.* │ secrets.* │ script.*  │
+│  fs.* │ cmd.run │ git.* │ http.* │ secrets.* │ browser.*  │
 ├─────────────────────────────────────────────────────────┤
 │  Goal Decomposer │ Daemon │ Credential Vault │ Memory    │
+│  Remote Execute  │ Browser Manager │ Session Persistence  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -448,8 +497,70 @@ agent
 
 ---
 
-## ⚙️ Configuration
+## 📋 Full CLI Reference
 
+### Core Commands
+
+```bash
+agent                           # Interactive REPL
+agent run "<goal>"              # One-shot goal execution
+agent run "<goal>" --remote URL # Execute on a remote server
+agent init                      # Initialize project
+agent studio                    # Web dashboard at :3333
+agent doctor                    # System health check
+agent update                    # Update to latest version
+```
+
+### Goal & Daemon
+
+```bash
+agent goal add "<title>"        # Create a goal
+agent goal list                 # List all goals
+agent goal decompose <id>       # AI breakdown into tasks
+agent goal status <id>          # Task-level progress
+
+agent daemon start              # Start background worker
+agent daemon stop               # Stop gracefully
+agent daemon status             # Health & uptime
+agent daemon logs               # Recent execution logs
+```
+
+# Check session status
+$ agent sessions list
+
+# Resume a session natively
+$ agent run --session <id>
+$ agent sessions resume <id>
+```
+
+#### Multi-Agent Swarm & Remote Delegation
+Coordinate multiple specialized agents, or assign tasks to remote instances securely using API keys.
+
+```bash
+# Start a multi-agent orchestrated run locally
+$ agent swarm start "Refactor the database schema" --max-agents 3
+
+# Add a remote agent instance from another machine
+$ agent swarm add-remote http://10.0.0.5:3334 coder --name "MacBook Pro" --key "oas_abcd123"
+```
+
+#### MCP Server (Model Context Protocol)
+Expose the agent's files, memories, and skills (as prompts) to an IDE like Cursor over Stdio or HTTP+SSE.
+
+```bash
+$ agent mcp                # runs STDIO transport
+$ agent mcp --http 3100    # runs HTTP+SSE transport on port 3100
+```
+
+#### Plugin Management
+Install 1st-party or community plugins directly from GitHub.
+
+```bash
+$ agent plugins search "database"
+$ agent plugins install https://github.com/postgres-connector
+```
+
+## Config
 ### `agent.yaml` (or `.agent/config.json`)
 
 ```yaml
@@ -486,6 +597,7 @@ policy:
 ```bash
 agent                           # Interactive REPL
 agent run "<goal>"              # One-shot goal execution
+agent run "<goal>" --remote URL # Execute on a remote server
 agent init                      # Initialize project
 agent studio                    # Web dashboard at :3333
 agent doctor                    # System health check
@@ -565,21 +677,23 @@ your-project/
 
 ---
 
-## 🆕 What's New in v0.9.27
+## 🆕 What's New in v0.11.0
 
+- **🌐 Browser Automation** — Built-in Playwright browser control (`desktop.browser.*`) with headless/headed modes and session persistence
+- **☁️ Remote Execution** — `agent run --remote http://server:3333` offloads LLM inference to a cloud server with real-time SSE streaming
+- **📡 POST /api/execute** — New streaming API endpoint for remote goal execution
 - **🚀 Remote Studio Access** — `agent studio --remote` generates a secure tunnel URL + QR code for mobile access
-- **📡 Live Task Streaming** — Real-time event timeline of daemon task execution (`task:start`/`complete`/`failed`)
-- **🔑 Interactive Credential Capture** — When the daemon needs a secret mid-task, a modal pops up in Studio, waiting for you to provide it before continuing
-- **🔔 Notifications Plugin** — Auto-notifies on goal completion/failure via Slack, Discord webhook, or SMTP Email
-- **💰 Cost Tracker Plugin** — Automatically tracks token usage + cost split by model, with a complete dashboard inside Agent Studio
+- **📡 Live Task Streaming** — Real-time event timeline of daemon task execution
+- **🔑 Interactive Credential Capture** — When the daemon needs a secret mid-task, a modal pops up in Studio
+- **🔔 Notifications Plugin** — Auto-notifies on goal completion/failure via Slack, Discord, or Email
+- **💰 Cost Tracker Plugin** — Token usage + cost tracking with Studio dashboard
 - **⚡ Parallel Task Execution** — Up to 3 independent tasks run simultaneously
 - **🔗 Task Output Chaining** — Downstream tasks receive upstream results
 - **🔁 Dynamic Re-decomposition** — Failed tasks trigger LLM re-planning
-- **🔑 Credential Vault** — Encrypted secret storage with Studio UI
-- **🌐 HTTP Tool** — `http.request` for API integrations
-- **📦 Full Capability Loading** — Daemon uses all project skills, scripts, commands, plugins
-- **📋 Goal Templates** — 6 pre-built workflow templates in Studio
-- **📜 Script & Command Tools** — LLM can execute existing scripts and commands
+- **🐝 Multi-Agent Swarm** — Coordinate specialized agents (Planner, Coder, Reviewer)
+- **🖥️ Desktop Automation** — Cross-platform screen capture, mouse, and keyboard control
+- **🌈 Multimodal** — Voice transcription, image analysis, and text-to-speech
+- **🐳 Sandboxed Execution** — Run commands in Docker containers
 
 ---
 

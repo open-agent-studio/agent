@@ -97,11 +97,33 @@ export function createPluginsCommand(): Command {
             const configLoader = new ConfigLoader();
             const config = await configLoader.load();
 
-            const isLocalPath = source.startsWith('.') || source.startsWith('/') || source.includes(path.sep);
+            const isUrl = source.startsWith('http://') || source.startsWith('https://');
+            const isLocalPath = !isUrl && (source.startsWith('.') || source.startsWith('/') || source.includes(path.sep));
 
-            if (isLocalPath) {
+            if (isUrl) {
+                console.log(chalk.dim(`\n📥 Installing plugin from web URL "${source}"...\n`));
+                const targetDir = path.resolve(process.cwd(), config.plugins?.installPaths?.[0] ?? '.agent/plugins');
+                mkdirSync(targetDir, { recursive: true });
+
+                if (source.includes('github.com')) {
+                    const { execSync } = await import('node:child_process');
+                    const repoName = source.split('/').pop()?.replace('.git', '') || 'plugin';
+                    const targetPath = path.join(targetDir, repoName);
+                    try {
+                        console.log(chalk.dim(`    Cloning repository...`));
+                        execSync(`git clone ${source} ${targetPath}`, { stdio: 'ignore' });
+                        console.log(chalk.green(`  ✓ Installed plugin from web to ${path.relative(process.cwd(), targetPath)}\n`));
+                    } catch (err) {
+                        console.error(chalk.red(`\n  ✗ Failed to clone repository: ${(err as Error).message}\n`));
+                        process.exit(1);
+                    }
+                } else {
+                    console.error(chalk.red(`\n  ✗ Web installation currently only supports GitHub Git URLs.\n`));
+                    process.exit(1);
+                }
+            } else if (isLocalPath) {
                 const absSource = path.resolve(source);
-                const targetDir = path.resolve(process.cwd(), config.plugins.installPaths[0] ?? '.agent/plugins');
+                const targetDir = path.resolve(process.cwd(), config.plugins?.installPaths?.[0] ?? '.agent/plugins');
                 const pluginDirName = path.basename(absSource);
                 const targetPath = path.join(targetDir, pluginDirName);
 

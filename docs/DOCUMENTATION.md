@@ -22,7 +22,9 @@
 14. [LLM Configuration](#llm-configuration)
 15. [Tool Reference](#tool-reference)
 16. [REST API Reference](#rest-api-reference)
-17. [Troubleshooting](#troubleshooting)
+17. [Browser Automation (Playwright)](#browser-automation-playwright)
+18. [Remote Execution](#remote-execution)
+19. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -855,6 +857,64 @@ Agent Studio exposes a REST API at `http://localhost:3333`:
 | `credential:required` | Server → Client | Daemon needs a credential |
 | `credential:provide` | Client → Server | User provides credential |
 | `task:progress` | Server → Client | Live task execution updates |
+
+### Remote Execution
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/execute` | Execute a goal with SSE streaming response |
+
+---
+
+## Browser Automation (Playwright)
+
+The agent includes built-in Playwright browser automation with session persistence.
+
+### Tools
+
+| Tool | Arguments | Description |
+|------|-----------|-------------|
+| `desktop.browser.open` | `{ url, headless? }` | Navigate to a URL |
+| `desktop.browser.click` | `{ selector }` | Click an element |
+| `desktop.browser.fill` | `{ selector, text }` | Fill an input field |
+| `desktop.browser.scrape` | `{ selector?, mode? }` | Extract page text or HTML |
+| `desktop.browser.screenshot` | `{ fullPage? }` | Capture PNG screenshot |
+| `desktop.browser.close` | — | Close browser and save session |
+
+### Session Persistence
+
+Cookies and localStorage are saved to `.agent/browser-session.json` on close and restored on next open.
+
+```bash
+npx playwright install chromium
+agent run "Open https://example.com and scrape the heading"
+```
+
+---
+
+## Remote Execution
+
+Run goals on a remote server while streaming output locally:
+
+```bash
+# On the remote server
+agent studio --port 3333
+
+# On your local machine
+agent run "Summarize the README" --remote http://server:3333
+```
+
+The `--remote` flag sends the goal to the remote Studio's `POST /api/execute` endpoint and streams the output back as Server-Sent Events.
+
+### SSE Events
+
+| Event | Data Fields | When |
+|-------|-------------|------|
+| `progress` | `{ message }` | Intermediate progress |
+| `success` | `{ message }` | Step completed |
+| `warning` | `{ message }` | Non-fatal warning |
+| `error` | `{ message }` | Fatal error |
+| `done` | `{ result }` | Goal completed |
 
 ---
 

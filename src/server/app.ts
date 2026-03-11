@@ -16,6 +16,7 @@ import { ScriptLoader } from '../scripts/loader.js';
 import { HookRegistry } from '../hooks/registry.js';
 import { DaemonManager } from '../daemon/manager.js';
 import { writeFile, mkdir, readFile, readdir, rm, access } from 'node:fs/promises';
+import { authMiddleware, generateApiKey, listApiKeys, revokeApiKey } from './auth.js';
 
 export function createStudioServer() {
     const app = express();
@@ -25,6 +26,46 @@ export function createStudioServer() {
 
     app.use(cors());
     app.use(express.json());
+
+    // ─── API Authentication ───
+    // Apply auth middleware to all /api/* routes
+    // Skips: GET /api/health, GET /api/instances, non-API routes
+    app.use(authMiddleware);
+
+    // ─── Auth Key Management API ───
+    app.get('/api/health', (_req, res) => {
+        res.json({ status: 'ok', timestamp: Date.now() });
+    });
+
+    app.post('/api/auth/keys', async (req, res) => {
+        try {
+            const label = (req.body as any)?.label || 'studio-generated';
+            const { rawKey, entry } = await generateApiKey(label);
+            res.json({ key: rawKey, id: entry.id, label: entry.label, createdAt: entry.createdAt });
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    app.get('/api/auth/keys', async (_req, res) => {
+        try {
+            const keys = await listApiKeys();
+            // Never return the full hash — show only metadata
+            res.json(keys.map(k => ({ id: k.id, label: k.label, createdAt: k.createdAt })));
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    app.delete('/api/auth/keys/:id', async (req, res) => {
+        try {
+            const ok = await revokeApiKey(req.params.id);
+            if (!ok) { res.status(404).json({ error: 'Key not found' }); return; }
+            res.json({ deleted: true });
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
 
     // ═══════════════════════════════════════════════
     // HELPER: resolve instance by ID
@@ -1031,6 +1072,130 @@ export function createStudioServer() {
             const result = await engine.speak(req.body.text);
             res.json(result);
         } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    // ═══════════════════════════════════════════════
+    // REMOTE EXECUTION (AGENT CLOUD API)
+    // ═══════════════════════════════════════════════
+    app.post('/api/execute', async (req, res) => {
+        const { goal } = req.body;
+        if (!goal) {
+            res.status(400).json({ error: 'Goal is required' });
+            return;
+        }
+
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
+        const sendEvent = (type: string, data: any) => {
+            res.write(`event: ${type}\n`);
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        };
+
+        try {
+            const configLoader = new ConfigLoader();
+            const config = await configLoader.load();
+
+            const { ToolRegistry } = await import('../tools/registry.js');
+            const { registerCoreTools } = await import('../cli/commands/init.js');
+            const { LLMRouter } = await import('../llm/router.js');
+            const { SkillLoader } = await import('../skills/loader.js');
+            const { ScriptLoader } = await import('../scripts/loader.js');
+            const { zodToJsonSchema } = await import('../utils/schema.js');
+
+            const registry = ToolRegistry.getInstance();
+            registerCoreTools(registry);
+
+            const skillLoader = new SkillLoader(config);
+            const scriptLoader = new ScriptLoader();
+            const llmRouter = new LLMRouter(config);
+
+            await skillLoader.loadAll();
+            await scriptLoader.loadAll(config.scripts?.installPaths ?? ['.agent/scripts'], process.cwd());
+
+            const ctx = {
+                runId: Date.now().toString(),
+                cwd: process.cwd(),
+                config,
+                autonomous: true, // Server executes autonomously
+                dryRun: false,
+                approvedPermissions: new Set<string>(),
+                onApproval: async () => true,
+                onProgress: (msg: string) => sendEvent('progress', { message: msg }),
+            };
+
+            const allTools = registry.list();
+            const toolDefs = allTools.map((t: any) => {
+                const fullTool = registry.get(t.name);
+                return {
+                    name: t.name,
+                    description: t.description,
+                    inputSchema: fullTool ? zodToJsonSchema(fullTool.inputSchema) : {},
+                };
+            });
+
+            const messages: any[] = [
+                {
+                    role: 'system',
+                    content: `You are an agent that accomplishes tasks using available tools.
+You have access to the following tools: ${toolDefs.map((t: any) => t.name).join(', ')}.
+INSTRUCTIONS:
+1. Use available tools to complete the user's goal step by step.
+2. Be proactive: if the user wants an action (open app, create file), DO IT. Do not just explain how.
+3. When done, provide a final summary.`,
+                },
+                { role: 'user', content: goal },
+            ];
+
+            const maxIterations = 20;
+            let finalOutput = '';
+
+            for (let i = 0; i < maxIterations; i++) {
+                const response = await llmRouter.chat({ messages, tools: toolDefs });
+
+                if (response.toolCalls && response.toolCalls.length > 0) {
+                    messages.push({
+                        role: 'assistant',
+                        content: response.content || '',
+                        toolCalls: response.toolCalls,
+                    });
+
+                    for (const tc of response.toolCalls) {
+                        const tool = registry.get(tc.name);
+                        if (!tool) {
+                            sendEvent('warning', { message: `Tool "${tc.name}" not found` });
+                            messages.push({ role: 'tool', content: JSON.stringify({ error: `Tool ${tc.name} not found` }), toolCallId: tc.id });
+                            continue;
+                        }
+
+                        sendEvent('progress', { message: `⚡ ${tc.name}(...)` });
+                        const result = await registry.execute(tc.name, tc.args, ctx);
+
+                        if (result.success) {
+                            sendEvent('success', { message: `  ✓ ${tc.name} succeeded` });
+                        } else {
+                            sendEvent('warning', { message: `  ✗ ${tc.name}: ${result.error}` });
+                        }
+
+                        messages.push({
+                            role: 'tool',
+                            content: JSON.stringify(result.data ?? { error: result.error }),
+                            toolCallId: tc.id,
+                        });
+                    }
+                } else {
+                    finalOutput = response.content;
+                    break;
+                }
+            }
+
+            sendEvent('done', { result: finalOutput });
+            res.end();
+        } catch (err) {
+            sendEvent('error', { message: (err as Error).message });
+            res.end();
+        }
     });
 
     // ═══════════════════════════════════════════════

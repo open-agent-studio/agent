@@ -20,6 +20,8 @@ import { createSandboxCommand } from './commands/sandbox.js';
 import { createSwarmCommand } from './commands/swarm.js';
 import { createDesktopCommand } from './commands/desktop.js';
 import { createMultimodalCommand } from './commands/multimodal.js';
+import { createApiKeysCommand } from './commands/api-keys.js';
+import { createSessionsCommand } from './commands/sessions.js';
 import { getAgentVersion } from '../utils/version.js';
 
 /**
@@ -59,6 +61,8 @@ export function createCLI(): Command {
     program.addCommand(createSwarmCommand());
     program.addCommand(createDesktopCommand());
     program.addCommand(createMultimodalCommand());
+    program.addCommand(createApiKeysCommand());
+    program.addCommand(createSessionsCommand());
 
     return program;
 }

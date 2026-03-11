@@ -1,16 +1,51 @@
 import type { LLMMessage } from '../llm/types.js';
+import type { SessionStore } from '../session/session-store.js';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Conversation State Manager — maintains multi-turn context within a REPL session
+ * Now backed by persistent SQLite storage
  */
 export class ConversationManager {
+    public sessionId: string;
+    public sessionName: string | null;
+
     private messages: LLMMessage[] = [];
     private systemPrompt: string;
     private turnCount = 0;
+    private store?: SessionStore;
 
-    constructor(systemPrompt: string) {
+    constructor(systemPrompt: string, store?: SessionStore, id?: string, name?: string | null) {
         this.systemPrompt = systemPrompt;
+        this.store = store;
+        this.sessionId = id || randomUUID();
+        this.sessionName = name || null;
         this.messages.push({ role: 'system', content: systemPrompt });
+    }
+
+    /**
+     * Restore an existing session from the store
+     */
+    static load(store: SessionStore, sessionId: string): ConversationManager | null {
+        const data = store.load(sessionId);
+        if (!data) return null;
+
+        const manager = new ConversationManager(data.systemPrompt, store, data.id, data.name);
+        manager.messages = data.messages;
+        manager.turnCount = data.turnCount;
+        return manager;
+    }
+
+    private autoSave(): void {
+        if (!this.store) return;
+        this.store.save({
+            id: this.sessionId,
+            name: this.sessionName,
+            messages: this.messages,
+            systemPrompt: this.systemPrompt,
+            turnCount: this.turnCount,
+            status: 'active'
+        });
     }
 
     /**
@@ -19,6 +54,7 @@ export class ConversationManager {
     addUser(content: string): void {
         this.messages.push({ role: 'user', content });
         this.turnCount++;
+        this.autoSave();
     }
 
     /**
@@ -26,6 +62,7 @@ export class ConversationManager {
      */
     addAssistant(content: string, toolCalls?: LLMMessage['toolCalls']): void {
         this.messages.push({ role: 'assistant', content, toolCalls });
+        this.autoSave();
     }
 
     /**
@@ -33,6 +70,7 @@ export class ConversationManager {
      */
     addToolResult(content: string, toolCallId: string): void {
         this.messages.push({ role: 'tool', content, toolCallId });
+        this.autoSave();
     }
 
     /**
@@ -66,6 +104,7 @@ export class ConversationManager {
         }
 
         this.messages = [system, ...recent];
+        this.autoSave();
     }
 
     /**
@@ -74,5 +113,6 @@ export class ConversationManager {
     reset(): void {
         this.messages = [{ role: 'system', content: this.systemPrompt }];
         this.turnCount = 0;
+        this.autoSave();
     }
 }
