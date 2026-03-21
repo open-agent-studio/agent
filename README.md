@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.svg" width="200" alt="Agent Studio Logo" />
+  <img src="logo-static.png" width="200" alt="Agent Studio Logo" />
 </p>
 
 # 🤖 Agent Runtime
