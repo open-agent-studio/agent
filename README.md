@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.svg" width="200" alt="Agent Studio Logo" />
+</p>
+
 # 🤖 Agent Runtime
 
 > **Your autonomous AI employee.** Give it a goal, walk away. It decomposes, executes, scripts, and learns — all by itself.
