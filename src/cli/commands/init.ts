@@ -11,6 +11,8 @@ import { gitTools } from '../../tools/core/git.js';
 import { projectTools } from '../../tools/core/project.js';
 import { cliTools } from '../../tools/core/cli-tools.js';
 import { browserTools } from '../../tools/core/browser.js';
+import { computerTool } from '../../tools/core/computer.js';
+import { uiTreeTool } from '../../tools/core/desktop-tree.js';
 import type { ToolDefinition } from '../../tools/types.js';
 
 /**
@@ -24,6 +26,8 @@ export function registerCoreTools(registry: ToolRegistry): void {
         ...projectTools as ToolDefinition[],
         ...cliTools as ToolDefinition[],
         ...browserTools as ToolDefinition[],
+        computerTool as ToolDefinition,
+        uiTreeTool as ToolDefinition,
     ];
 
     for (const tool of allTools) {

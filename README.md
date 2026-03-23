@@ -682,6 +682,16 @@ your-project/
 
 ---
 
+## 🆕 What's New in v0.12.0
+
+- **🤖 Native Anthropic Computer Use** — Seamlessly integrates the `computer_20241022` tool spec globally.
+- **🖥️ OS-Level UI Parsing** — Native accessibility extraction parsing the screen into a true Desktop DOM (macOS, Windows, Linux AT-SPI) via `desktop.ui_tree`.
+- **☁️ Persistent Sessions** — Agent conversations backed into `memory.db` for multi-session resuming.
+- **🔗 MCP Server** — Exposes built-in tools over HTTP/SSE via `agent mcp serve`.
+- **🔌 Plugin HUB** — Remote 1-click install via URL / UI marketplace.
+
+---
+
 ## 🆕 What's New in v0.11.0
 
 - **🌐 Browser Automation** — Built-in Playwright browser control (`desktop.browser.*`) with headless/headed modes and session persistence
