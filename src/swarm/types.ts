@@ -1,6 +1,6 @@
 // ─── Swarm Types ───
 
-export type AgentRole = 'planner' | 'coder' | 'reviewer' | 'researcher' | 'tester' | 'custom';
+export type AgentRole = 'planner' | 'coder' | 'reviewer' | 'researcher' | 'tester' | 'operator' | 'custom';
 
 export interface SwarmConfig {
     /** Enable swarm mode */

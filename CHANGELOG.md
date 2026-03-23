@@ -2,6 +2,10 @@
 
 All notable changes to the Agent Runtime repository will be documented in this file.
 
+## [0.12.1] - "GUI Operator"
+### Added
+- **GUI Operator Swarm Persona**: Introduced the advanced `operator` role natively inside the Swarm stack. The operator uses `desktop.ui_tree` and `computer_20241022` entirely by itself to perform continuous UI interactions deterministically across the active operating system without requesting coding help.
+
 ## [0.12.0] - "Advanced Desktop Vision"
 ### Added
 - **Phase 12: Advanced Desktop Automation** features.

@@ -686,6 +686,7 @@ your-project/
 
 - **🤖 Native Anthropic Computer Use** — Seamlessly integrates the `computer_20241022` tool spec globally.
 - **🖥️ OS-Level UI Parsing** — Native accessibility extraction parsing the screen into a true Desktop DOM (macOS, Windows, Linux AT-SPI) via `desktop.ui_tree`.
+- **🕵️ GUI Operator Persona** — The `operator` swarm agent role takes full autonomous control of your mouse and keyboard using live screen context.
 - **☁️ Persistent Sessions** — Agent conversations backed into `memory.db` for multi-session resuming.
 - **🔗 MCP Server** — Exposes built-in tools over HTTP/SSE via `agent mcp serve`.
 - **🔌 Plugin HUB** — Remote 1-click install via URL / UI marketplace.
