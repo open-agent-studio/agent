@@ -825,6 +825,94 @@ export function createStudioServer() {
     });
 
     // ═══════════════════════════════════════════════
+    // MULTI-MODEL SETTINGS API
+    // ═══════════════════════════════════════════════
+    app.get('/api/instances/:id/settings/models', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+
+            const { ConfigLoader } = await import('../config/loader.js');
+            const loader = new ConfigLoader();
+            await loader.load();
+            const config = loader.get();
+            
+            const { CredentialStore } = await import('../credentials/store.js');
+            const store = new CredentialStore(inst.cwd);
+            const vaultKeys = await store.list();
+
+            const providers = {
+                openai: {
+                    configured: vaultKeys.includes('OPENAI_API_KEY') || !!process.env.OPENAI_API_KEY,
+                    model: config.models?.providers?.openai?.model || 'gpt-4o'
+                },
+                anthropic: {
+                    configured: vaultKeys.includes('ANTHROPIC_API_KEY') || !!process.env.ANTHROPIC_API_KEY,
+                    model: config.models?.providers?.anthropic?.model || 'claude-3-5-sonnet-20241022'
+                },
+                google: {
+                    configured: vaultKeys.includes('GEMINI_API_KEY') || !!process.env.GEMINI_API_KEY,
+                    model: config.models?.providers?.google?.model || 'gemini-1.5-pro'
+                },
+                groq: {
+                    configured: vaultKeys.includes('GROQ_API_KEY') || !!process.env.GROQ_API_KEY,
+                    model: config.models?.providers?.groq?.model || 'llama3-70b-8192'
+                },
+                ollama: {
+                    configured: true,
+                    model: config.models?.providers?.ollama?.model || 'llama3.1'
+                }
+            };
+
+            res.json({
+                defaultProvider: config.models?.routing?.defaultProvider || 'openai',
+                providers
+            });
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    app.post('/api/instances/:id/settings/models', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+
+            const { provider, model, apiKey } = req.body;
+            
+            const { ConfigLoader } = await import('../config/loader.js');
+            const loader = new ConfigLoader();
+            await loader.load();
+
+            if (provider) {
+                await loader.setValue('models.routing.defaultProvider', provider);
+            }
+            if (model && provider) {
+                await loader.setValue(`models.providers.${provider}.model`, model);
+            }
+
+            if (apiKey && provider) {
+                const { CredentialStore } = await import('../credentials/store.js');
+                const store = new CredentialStore(inst.cwd);
+                let keyName = '';
+                switch (provider) {
+                    case 'openai': keyName = 'OPENAI_API_KEY'; break;
+                    case 'anthropic': keyName = 'ANTHROPIC_API_KEY'; break;
+                    case 'google': keyName = 'GEMINI_API_KEY'; break;
+                    case 'groq': keyName = 'GROQ_API_KEY'; break;
+                }
+                if (keyName) {
+                    await store.set(keyName, apiKey);
+                }
+            }
+
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    // ═══════════════════════════════════════════════
     // COST TRACKING API
     // ═══════════════════════════════════════════════
     app.get('/api/instances/:id/costs/summary', async (req, res) => {

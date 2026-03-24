@@ -2,6 +2,12 @@
 
 All notable changes to the Agent Runtime repository will be documented in this file.
 
+## [0.12.2] - "Studio Multi-Model Integration"
+### Added
+- **Studio Multi-Model Dashboard**: Dynamically switch the daemon's underlying LLM brain (OpenAI, Anthropic, Google Gemini, Groq, Ollama) directly from the Web UI.
+- Secure visual vault integration allowing API Key storage immediately into `.agent/vault.json`.
+- Advanced Model Cost Tracking metrics and sub-routers updated in `src/llm/router.ts`.
+
 ## [0.12.1] - "GUI Operator"
 ### Added
 - **GUI Operator Swarm Persona**: Introduced the advanced `operator` role natively inside the Swarm stack. The operator uses `desktop.ui_tree` and `computer_20241022` entirely by itself to perform continuous UI interactions deterministically across the active operating system without requesting coding help.

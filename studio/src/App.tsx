@@ -3,7 +3,7 @@ import { Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Terminal, Activity, Workflow, Server, ArrowLeft, Zap, Target,
   Wrench, Code, FileCode, Package, Brain, Sparkles, KeyRound, DollarSign, Bell,
-  Container, Users, Monitor, Mic
+  Container, Users, Monitor, Mic, Cpu
 } from 'lucide-react';
 import { Terminal as TerminalComponent } from './components/Terminal';
 import { Capabilities } from './components/Capabilities';
@@ -24,6 +24,7 @@ import SandboxPanel from './components/SandboxPanel';
 import SwarmPanel from './components/SwarmPanel';
 import DesktopPanel from './components/DesktopPanel';
 import MultimodalPanel from './components/MultimodalPanel';
+import ModelsManager from './components/ModelsManager';
 
 export default function App() {
   return (
@@ -166,6 +167,7 @@ const sidebarItems = [
   { icon: Target, label: 'Goals & Tasks', path: 'goals' },
   { icon: Sparkles, label: 'Templates', path: 'templates' },
   { icon: KeyRound, label: 'Credentials', path: 'credentials' },
+  { icon: Cpu, label: 'Models', path: 'models' },
   { icon: Activity, label: 'Live Stream', path: 'stream' },
   { icon: Wrench, label: 'Skills', path: 'skills' },
   { icon: Code, label: 'Commands', path: 'commands' },
@@ -221,6 +223,7 @@ function InstanceView() {
           <Route path="goals" element={<GoalsPanel />} />
           <Route path="templates" element={<GoalTemplates />} />
           <Route path="credentials" element={<CredentialsManager />} />
+          <Route path="models" element={<ModelsManager />} />
           <Route path="stream" element={<TaskStreaming />} />
           <Route path="skills" element={<SkillsManager />} />
           <Route path="commands" element={<CommandsManager />} />

@@ -78,9 +78,11 @@ export class LLMRouter {
         }
 
         // Determine provider order based on routing config
+        const defaultProvider = this.config.models.routing.defaultProvider;
+        const baseChain = this.config.models.routing.fallbackChain.filter(p => p !== defaultProvider);
         const chain = this.config.models.routing.offlineFirst
             ? this.getOfflineFirstChain()
-            : this.config.models.routing.fallbackChain;
+            : [defaultProvider, ...baseChain];
 
         // Try providers in order
         const maxRetries = this.config.tools.maxRetries || 2;
@@ -164,9 +166,11 @@ export class LLMRouter {
      * Routes to the first available provider that supports embeddings.
      */
     async generateEmbedding(text: string): Promise<number[]> {
+        const defaultProvider = this.config.models.routing.defaultProvider;
+        const baseChain = this.config.models.routing.fallbackChain.filter(p => p !== defaultProvider);
         const chain = this.config.models.routing.offlineFirst
             ? this.getOfflineFirstChain()
-            : this.config.models.routing.fallbackChain;
+            : [defaultProvider, ...baseChain];
 
         for (const providerName of chain) {
             const provider = this.providers.get(providerName);
