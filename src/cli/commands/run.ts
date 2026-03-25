@@ -35,6 +35,11 @@ export function createRunCommand(): Command {
             const configLoader = new ConfigLoader();
             const config = await configLoader.load();
 
+            // Auto-enable desktop automation tools if the operator persona is requested
+            if (options.role === 'operator') {
+                config.tools.enabled.push('computer_20241022', 'desktop.*');
+            }
+
             // ─── Remote Execution Mode ───
             if (options.remote) {
                 progress.start(`Connecting to remote agent: ${options.remote}`, 1);
