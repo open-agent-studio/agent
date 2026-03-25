@@ -2,6 +2,10 @@
 
 All notable changes to the Agent Runtime repository will be documented in this file.
 
+## [0.12.4] - "Studio Auth Re-sync"
+### Fixed
+- Fixed a massive `401 Unauthorized` drop occurring across the Studio UI when interacting with `memory`, `swarms`, and `costs` panels by rewriting a global `window.fetch` interceptor to gracefully supply Phase 11 API Vault authentication tokens recursively.
+
 ## [0.12.3] - "GUI Operator Hotfix"
 ### Fixed
 - Stabilized `agent run --role operator` CLI invocation. Operator personas now dynamically load system configuration and natively bypass local runtime `tools.enabled` sandbox restrictions to properly fetch the OS Desktop Tree without throwing false configuration blockades.
