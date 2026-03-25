@@ -28,9 +28,10 @@ export function createRunCommand(): Command {
         .option('--dry-run', 'Show what would be done without executing')
         .option('--remote <url>', 'Run the agent remotely on a daemon/cloud server (e.g. http://localhost:3333)')
         .option('--remote-key <key>', 'API key for the remote Agent Studio instance')
+        .option('-r, --role <role>', 'Run the agent using a specific persona (e.g. planner, coder, operator)')
         .option('--session <id>', 'Resume an existing session by ID')
         .option('--session-name <name>', 'Assign a name to the new session')
-        .action(async (goal: string, options: { skill?: string; autonomous?: boolean; dryRun?: boolean; remote?: string; remoteKey?: string; session?: string; sessionName?: string }) => {
+        .action(async (goal: string, options: { skill?: string; role?: string; autonomous?: boolean; dryRun?: boolean; remote?: string; remoteKey?: string; session?: string; sessionName?: string }) => {
             const configLoader = new ConfigLoader();
             const config = await configLoader.load();
 

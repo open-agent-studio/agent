@@ -18,31 +18,33 @@ export class LLMRouter {
         this.initProviders();
     }
 
-    private sanitizeToolName(name: string): string {
-        return name.replace(/\./g, '_');
-    }
-
-    private unsanitizeToolName(name: string): string {
-        return name.replace(/_/g, '.');
-    }
+// Removed static sanitize methods to use dynamic ones in executeWithProvider
 
     private async executeWithProvider(provider: LLMProvider, request: LLMRequest): Promise<LLMResponse> {
+        const nameMap = new Map<string, string>();
+        const sanitize = (name: string) => {
+            const sanitized = name.replace(/\./g, '_');
+            nameMap.set(sanitized, name);
+            return sanitized;
+        };
+        const unsanitize = (name: string) => nameMap.get(name) || name;
+
         // Many LLMs (like OpenAI) strictly reject dots in tool names via API HTTP validation
         const sanitizedRequest: LLMRequest = {
             ...request,
             tools: request.tools?.map(t => ({
                 ...t,
-                name: this.sanitizeToolName(t.name)
+                name: sanitize(t.name)
             })),
             messages: request.messages.map(m => {
                 const newM = { ...m };
                 if (newM.name) {
-                    newM.name = this.sanitizeToolName(newM.name);
+                    newM.name = sanitize(newM.name);
                 }
                 if (newM.toolCalls) {
                     newM.toolCalls = newM.toolCalls.map(tc => ({
                         ...tc,
-                        name: this.sanitizeToolName(tc.name)
+                        name: sanitize(tc.name)
                     }));
                 }
                 return newM;
@@ -51,11 +53,11 @@ export class LLMRouter {
 
         const response = await provider.chat(sanitizedRequest);
 
-        // Convert the underscore names back to their original dot notation for our registry match logic
+        // Convert the underscore names back to their original dot notation natively using the request map
         if (response.toolCalls) {
             response.toolCalls = response.toolCalls.map(tc => ({
                 ...tc,
-                name: this.unsanitizeToolName(tc.name)
+                name: unsanitize(tc.name)
             }));
         }
 
