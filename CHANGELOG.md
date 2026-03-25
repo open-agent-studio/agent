@@ -2,6 +2,11 @@
 
 All notable changes to the Agent Runtime repository will be documented in this file.
 
+## [0.12.3] - "GUI Operator Hotfix"
+### Fixed
+- Stabilized `agent run --role operator` CLI invocation. Operator personas now dynamically load system configuration and natively bypass local runtime `tools.enabled` sandbox restrictions to properly fetch the OS Desktop Tree without throwing false configuration blockades.
+- Re-architected LLM Router tool sanitization logic to support hardcoded underscore parameters (like Anthropic's `computer_20241022`).
+
 ## [0.12.2] - "Studio Multi-Model Integration"
 ### Added
 - **Studio Multi-Model Dashboard**: Dynamically switch the daemon's underlying LLM brain (OpenAI, Anthropic, Google Gemini, Groq, Ollama) directly from the Web UI.
