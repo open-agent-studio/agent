@@ -3,7 +3,7 @@ import { Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Terminal, Activity, Workflow, Server, ArrowLeft, Zap, Target,
   Wrench, Code, FileCode, Package, Brain, Sparkles, KeyRound, DollarSign, Bell,
-  Container, Users, Monitor, Mic, Cpu
+  Container, Users, Monitor, Mic, Cpu, Share2
 } from 'lucide-react';
 import { Terminal as TerminalComponent } from './components/Terminal';
 import { Capabilities } from './components/Capabilities';
@@ -25,6 +25,7 @@ import SwarmPanel from './components/SwarmPanel';
 import DesktopPanel from './components/DesktopPanel';
 import MultimodalPanel from './components/MultimodalPanel';
 import ModelsManager from './components/ModelsManager';
+import SocialPanel from './components/SocialPanel';
 
 export default function App() {
   return (
@@ -185,6 +186,7 @@ const sidebarGroups = [
     items: [
       { icon: Wrench, label: 'Skills', path: 'skills' },
       { icon: Package, label: 'Plugins', path: 'plugins' },
+      { icon: Share2, label: 'Social Media', path: 'social' },
       { icon: Code, label: 'Commands', path: 'commands' },
       { icon: FileCode, label: 'Scripts', path: 'scripts' },
     ]
@@ -271,6 +273,7 @@ function InstanceView() {
           <Route path="swarm" element={<SwarmPanel />} />
           <Route path="desktop" element={<DesktopPanel />} />
           <Route path="multimodal" element={<MultimodalPanel />} />
+          <Route path="social" element={<SocialPanel />} />
         </Routes>
         {/* Global credential capture modal */}
         <CredentialCapture />

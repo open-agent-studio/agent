@@ -973,6 +973,89 @@ export function createStudioServer() {
     });
 
     // ═══════════════════════════════════════════════
+    // SOCIAL MEDIA PLUGIN ENDPOINTS
+    // ═══════════════════════════════════════════════
+
+    // GET /api/instances/:id/social/platforms — list platforms & auth status
+    app.get('/api/instances/:id/social/platforms', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+
+            const { CredentialStore } = await import('../credentials/store.js');
+            const store = new CredentialStore(inst.cwd);
+
+            // Check each platform's auth status via credential keys
+            const platformDefs = [
+                { name: 'linkedin', displayName: 'LinkedIn', capabilities: ['text', 'image', 'link', 'article'] },
+                { name: 'twitter', displayName: 'X (Twitter)', capabilities: ['text', 'image', 'thread', 'poll'] },
+                { name: 'facebook', displayName: 'Facebook', capabilities: ['text', 'image', 'link', 'page_post'] },
+                { name: 'instagram', displayName: 'Instagram', capabilities: ['image', 'carousel', 'story'] },
+            ];
+
+            const platforms = await Promise.all(platformDefs.map(async (p) => {
+                const key = `SOCIAL_${p.name.toUpperCase()}_ACCESS_TOKEN`;
+                const hasToken = await store.has(key);
+                let username: string | undefined;
+                if (hasToken) {
+                    const nameKey = p.name === 'facebook' ? 'SOCIAL_META_PAGE_NAME' : undefined;
+                    if (nameKey) username = (await store.get(nameKey)) || undefined;
+                }
+                return { ...p, authenticated: hasToken, username };
+            }));
+
+            res.json({ platforms });
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    // POST /api/instances/:id/social/auth — trigger OAuth for a platform
+    app.post('/api/instances/:id/social/auth', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+
+            const { platform } = req.body;
+            if (!platform) { res.status(400).json({ error: 'Missing platform' }); return; }
+
+            // Execute the social.auth tool via the instance's tool registry
+            const registry = (inst as any).toolRegistry;
+            if (registry && registry.has('social.auth')) {
+                const tool = registry.get('social.auth');
+                const result = await tool.execute({ platform }, {});
+                res.json(result);
+            } else {
+                res.json({ success: false, error: 'Social plugin not loaded. Install @open-agent-studio/plugin-social first.' });
+            }
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    // POST /api/instances/:id/social/post — post to social platforms
+    app.post('/api/instances/:id/social/post', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+
+            const { platforms: targetPlatforms, text, imageUrl, linkUrl, tags } = req.body;
+            if (!targetPlatforms || !text) { res.status(400).json({ error: 'Missing platforms or text' }); return; }
+
+            const registry = (inst as any).toolRegistry;
+            if (registry && registry.has('social.post')) {
+                const tool = registry.get('social.post');
+                const result = await tool.execute({ platforms: targetPlatforms, text, imageUrl, linkUrl, tags }, {});
+                res.json(result);
+            } else {
+                res.json({ success: false, error: 'Social plugin not loaded.' });
+            }
+        } catch (err) {
+            res.status(500).json({ error: (err as Error).message });
+        }
+    });
+
+    // ═══════════════════════════════════════════════
     // SOCKET.IO FOR LIVE LOGS & APPROVAL RELAY
     // ═══════════════════════════════════════════════
     io.on('connection', (socket) => {
