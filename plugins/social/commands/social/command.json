@@ -1,0 +1,56 @@
+{
+    "name": "social",
+    "description": "Manage social media integrations — authenticate, post, and check status across LinkedIn, X, Facebook, and Instagram.",
+    "subcommands": [
+        {
+            "name": "auth",
+            "description": "Authenticate with a social media platform",
+            "usage": "agent social auth <platform>",
+            "args": [
+                {
+                    "name": "platform",
+                    "description": "Platform to authenticate with: linkedin, twitter, facebook, instagram",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "post",
+            "description": "Post content to social media platforms",
+            "usage": "agent social post --platform <platform> --text <text>",
+            "options": [
+                {
+                    "name": "--platform",
+                    "alias": "-p",
+                    "description": "Target platforms (comma-separated): linkedin,twitter,facebook,instagram",
+                    "required": true
+                },
+                {
+                    "name": "--text",
+                    "alias": "-t",
+                    "description": "Post content text",
+                    "required": true
+                },
+                {
+                    "name": "--image",
+                    "alias": "-i",
+                    "description": "Image URL to attach"
+                },
+                {
+                    "name": "--link",
+                    "alias": "-l",
+                    "description": "Link URL to include"
+                },
+                {
+                    "name": "--tags",
+                    "description": "Comma-separated hashtags (without #)"
+                }
+            ]
+        },
+        {
+            "name": "status",
+            "description": "Check authentication status for all platforms",
+            "usage": "agent social status"
+        }
+    ]
+}

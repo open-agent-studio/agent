@@ -1,0 +1,12 @@
+{
+    "name": "@open-agent-studio/plugin-social",
+    "version": "1.0.0",
+    "description": "Unified Social Media plugin — post to LinkedIn, X/Twitter, Facebook, and Instagram from your autonomous AI agent.",
+    "author": "Open Agent Studio",
+    "license": "MIT",
+    "homepage": "https://openagent.studio/hub/plugins/social",
+    "skills": ["skills"],
+    "commands": ["commands"],
+    "tools": ["dist/index.js"],
+    "scripts": []
+}

@@ -1,0 +1,41 @@
+{
+    "name": "@open-agent-studio/plugin-social",
+    "version": "1.0.0",
+    "description": "Unified Social Media plugin for Open Agent Studio — post to LinkedIn, X, Meta, and Instagram from your AI agent",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "prepublishOnly": "npm run build"
+    },
+    "files": [
+        "dist",
+        "plugin.json",
+        "skills",
+        "commands",
+        "README.md"
+    ],
+    "keywords": [
+        "agent",
+        "social-media",
+        "linkedin",
+        "twitter",
+        "facebook",
+        "instagram",
+        "automation",
+        "open-agent-studio"
+    ],
+    "author": "Open Agent Studio",
+    "license": "MIT",
+    "dependencies": {
+        "zod": "^3.22.0"
+    },
+    "peerDependencies": {
+        "@open-agent-studio/agent": ">=0.12.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.3.0",
+        "@types/node": "^22.0.0"
+    }
+}

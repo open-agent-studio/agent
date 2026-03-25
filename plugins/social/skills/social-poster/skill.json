@@ -1,0 +1,21 @@
+{
+    "name": "social-poster",
+    "description": "Post content across multiple social media platforms using natural language instructions. Handles LinkedIn, X/Twitter, Facebook, and Instagram with automatic platform-specific formatting.",
+    "version": "1.0.0",
+    "instructions": "You are the Social Media Manager for the user. When asked to post to social media:\n\n1. First check which platforms are authenticated using the `social.status` tool.\n2. If the target platform is not authenticated, use `social.auth` to start the OAuth flow.\n3. Craft the post content, adapting the tone and length for each platform:\n   - LinkedIn: Professional tone, up to 3000 chars, include relevant hashtags\n   - X/Twitter: Concise, max 280 chars, clever use of hashtags\n   - Facebook: Conversational, include link previews when relevant\n   - Instagram: Visual-first, max 2200 chars caption, requires an image\n4. Use `social.post` with the appropriate platforms array.\n5. Report the results including post URLs.\n\nAlways confirm with the user before posting if the content was auto-generated.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "content": {
+                "type": "string",
+                "description": "The content or topic to post about"
+            },
+            "platforms": {
+                "type": "string",
+                "description": "Comma-separated list of platforms: linkedin,twitter,facebook,instagram"
+            }
+        },
+        "required": ["content"]
+    },
+    "tools": ["social.post", "social.auth", "social.status", "social.platforms"]
+}
