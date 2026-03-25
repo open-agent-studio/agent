@@ -37,8 +37,13 @@ export default function SwarmPanel() {
     const fetchStatus = async () => {
         try {
             const res = await fetch('/api/swarm/status');
+            if (!res.ok) { setStatus(null); return; }
             const data = await res.json();
-            setStatus(data);
+            if (data && data.swarmId) {
+                setStatus(data);
+            } else {
+                setStatus(null);
+            }
         } catch {
             setStatus(null);
         } finally {

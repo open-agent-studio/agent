@@ -139,6 +139,13 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
         return;
     }
 
+    // Skip auth for localhost / same-origin requests (Studio UI served locally)
+    const host = req.hostname || req.headers.host || '';
+    if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('localhost:') || host.startsWith('127.0.0.1:')) {
+        next();
+        return;
+    }
+
     // Extract key from Authorization header or query param
     let key: string | undefined;
 

@@ -48,11 +48,11 @@ export default function CostDashboard() {
 
     useEffect(() => {
         Promise.all([
-            fetch(`${API}/api/instances/${id}/costs/summary`).then(r => r.json()),
-            fetch(`${API}/api/instances/${id}/costs/recent?limit=30`).then(r => r.json()),
+            fetch(`${API}/api/instances/${id}/costs/summary`).then(r => r.ok ? r.json() : null),
+            fetch(`${API}/api/instances/${id}/costs/recent?limit=30`).then(r => r.ok ? r.json() : null),
         ]).then(([sum, rec]) => {
-            setSummary(sum);
-            setRecent(rec.entries || []);
+            if (sum) setSummary(sum);
+            setRecent(rec?.entries || []);
         }).catch(console.error).finally(() => setLoading(false));
     }, [id]);
 
