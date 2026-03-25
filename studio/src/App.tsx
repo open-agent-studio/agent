@@ -161,26 +161,51 @@ function Dashboard() {
   );
 }
 
-const sidebarItems = [
-  { icon: Terminal, label: 'Console', path: 'console' },
-  { icon: Zap, label: 'Capabilities', path: 'capabilities' },
-  { icon: Target, label: 'Goals & Tasks', path: 'goals' },
-  { icon: Sparkles, label: 'Templates', path: 'templates' },
-  { icon: KeyRound, label: 'Credentials', path: 'credentials' },
-  { icon: Cpu, label: 'Models', path: 'models' },
-  { icon: Activity, label: 'Live Stream', path: 'stream' },
-  { icon: Wrench, label: 'Skills', path: 'skills' },
-  { icon: Code, label: 'Commands', path: 'commands' },
-  { icon: FileCode, label: 'Scripts', path: 'scripts' },
-  { icon: Package, label: 'Plugins', path: 'plugins' },
-  { icon: Server, label: 'Daemon', path: 'daemon' },
-  { icon: DollarSign, label: 'Costs', path: 'costs' },
-  { icon: Bell, label: 'Notifications', path: 'notifications' },
-  { icon: Brain, label: 'Memory', path: 'memory' },
-  { icon: Container, label: 'Sandbox', path: 'sandbox' },
-  { icon: Users, label: 'Swarm', path: 'swarm' },
-  { icon: Monitor, label: 'Desktop', path: 'desktop' },
-  { icon: Mic, label: 'Multimodal', path: 'multimodal' },
+const sidebarGroups = [
+  {
+    title: 'Core Activity',
+    items: [
+      { icon: Terminal, label: 'Console', path: 'console' },
+      { icon: Target, label: 'Goals & Tasks', path: 'goals' },
+      { icon: Activity, label: 'Live Stream', path: 'stream' },
+      { icon: Brain, label: 'Memory', path: 'memory' },
+    ]
+  },
+  {
+    title: 'Configuration',
+    items: [
+      { icon: Cpu, label: 'Models', path: 'models' },
+      { icon: KeyRound, label: 'Credentials', path: 'credentials' },
+      { icon: Server, label: 'Daemon', path: 'daemon' },
+      { icon: Zap, label: 'Capabilities', path: 'capabilities' },
+    ]
+  },
+  {
+    title: 'Ecosystem',
+    items: [
+      { icon: Wrench, label: 'Skills', path: 'skills' },
+      { icon: Package, label: 'Plugins', path: 'plugins' },
+      { icon: Code, label: 'Commands', path: 'commands' },
+      { icon: FileCode, label: 'Scripts', path: 'scripts' },
+    ]
+  },
+  {
+    title: 'Advanced Execution',
+    items: [
+      { icon: Monitor, label: 'Desktop Automation', path: 'desktop' },
+      { icon: Users, label: 'Swarm Orchestration', path: 'swarm' },
+      { icon: Container, label: 'Sandbox Isolation', path: 'sandbox' },
+      { icon: Mic, label: 'Multimodal Vision', path: 'multimodal' },
+      { icon: Sparkles, label: 'Templates', path: 'templates' },
+    ]
+  },
+  {
+    title: 'Monitoring',
+    items: [
+      { icon: DollarSign, label: 'Cost Analytics', path: 'costs' },
+      { icon: Bell, label: 'Notifications', path: 'notifications' },
+    ]
+  }
 ];
 
 function InstanceView() {
@@ -199,18 +224,27 @@ function InstanceView() {
           <div className="font-medium truncate text-sm">Instance Control</div>
         </div>
 
-        <nav className="p-2 space-y-0.5 mt-1 flex-1 overflow-y-auto">
-          {sidebarItems.map(({ icon: Icon, label, path }) => (
-            <Link
-              key={path}
-              to={`/instance/${id}/${path}`}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentTab === path
-                ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
-                }`}
-            >
-              <Icon size={15} /> {label}
-            </Link>
+        <nav className="p-2 mt-1 flex-1 overflow-y-auto space-y-6">
+          {sidebarGroups.map((group, groupIdx) => (
+            <div key={groupIdx}>
+              <div className="text-[10px] font-bold tracking-wider text-neutral-500 uppercase px-3 mb-1.5">
+                {group.title}
+              </div>
+              <div className="space-y-0.5">
+                {group.items.map(({ icon: Icon, label, path }) => (
+                  <Link
+                    key={path}
+                    to={`/instance/${id}/${path}`}
+                    className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm transition-colors ${currentTab === path
+                      ? 'bg-indigo-500/10 text-indigo-400 font-medium border border-indigo-500/20'
+                      : 'text-neutral-400 font-medium hover:bg-white/5 hover:text-neutral-200'
+                      }`}
+                  >
+                    <Icon size={15} /> {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
       </aside>
