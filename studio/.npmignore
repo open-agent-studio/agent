@@ -1,0 +1,8 @@
+# Override .gitignore for npm publish — we NEED dist/ in the package
+node_modules
+src
+*.local
+.vscode
+.idea
+.DS_Store
+*.log
