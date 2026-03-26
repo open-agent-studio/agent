@@ -1,0 +1,5 @@
+{
+    "name": "web-scraper",
+    "description": "Scrape websites using Apify Actors. Describe what you want to scrape in plain English and the agent will find the right Actor, configure it, run it, and return the results.",
+    "instructions": "When the user asks to scrape a website or extract data from the web:\n1. Use apify.store to search for an appropriate Actor (e.g., 'web scraper', 'google maps scraper', 'twitter scraper')\n2. Select the best Actor based on the user's needs\n3. Use apify.run with sync=true to run the Actor with appropriate input\n4. Present the results in a readable format\n\nCommon Actors:\n- apify/web-scraper: General-purpose web scraper\n- apify/cheerio-scraper: Fast HTML scraper\n- apify/puppeteer-scraper: JavaScript-rendered pages\n- apify/google-search-scraper: Google search results\n- apify/instagram-scraper: Instagram profiles and posts\n\nAlways explain what Actor you're using and why."
+}

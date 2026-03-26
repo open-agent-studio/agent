@@ -1056,6 +1056,107 @@ export function createStudioServer() {
     });
 
     // ═══════════════════════════════════════════════
+    // APIFY INTEGRATION API
+    // ═══════════════════════════════════════════════
+
+    // GET /api/instances/:id/apify/actors — list user's Apify Actors
+    app.get('/api/instances/:id/apify/actors', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+            const { CredentialStore } = await import('../credentials/store.js');
+            const creds = new CredentialStore(inst.cwd);
+            const token = await creds.get('APIFY_API_TOKEN') || process.env.APIFY_API_TOKEN;
+            if (!token) { res.status(400).json({ error: 'APIFY_API_TOKEN not configured' }); return; }
+
+            const apiRes = await fetch('https://api.apify.com/v2/acts?limit=50', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!apiRes.ok) { res.status(apiRes.status).json({ error: 'Apify API error' }); return; }
+            const data = await apiRes.json() as any;
+            res.json({ actors: (data.data?.items || []).map((a: any) => ({
+                id: a.id, name: a.name, title: a.title, description: a.description?.slice(0, 150)
+            }))});
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    // POST /api/instances/:id/apify/run — run an Apify Actor
+    app.post('/api/instances/:id/apify/run', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+            const { CredentialStore } = await import('../credentials/store.js');
+            const creds = new CredentialStore(inst.cwd);
+            const token = await creds.get('APIFY_API_TOKEN') || process.env.APIFY_API_TOKEN;
+            if (!token) { res.status(400).json({ error: 'APIFY_API_TOKEN not configured' }); return; }
+
+            const { actorId, input, sync } = req.body;
+            if (!actorId) { res.status(400).json({ error: 'actorId is required' }); return; }
+
+            const endpoint = sync
+                ? `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items`
+                : `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/runs`;
+
+            const apiRes = await fetch(`${endpoint}?token=${token}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: input ? JSON.stringify(input) : undefined,
+            });
+            if (!apiRes.ok) {
+                const errText = await apiRes.text();
+                res.status(apiRes.status).json({ error: errText }); return;
+            }
+            const data = await apiRes.json();
+            res.json(sync ? { items: data, itemCount: Array.isArray(data) ? data.length : 0 } : data);
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    // GET /api/instances/:id/apify/runs — list recent Actor runs
+    app.get('/api/instances/:id/apify/runs', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+            const { CredentialStore } = await import('../credentials/store.js');
+            const creds = new CredentialStore(inst.cwd);
+            const token = await creds.get('APIFY_API_TOKEN') || process.env.APIFY_API_TOKEN;
+            if (!token) { res.status(400).json({ error: 'APIFY_API_TOKEN not configured' }); return; }
+
+            const apiRes = await fetch('https://api.apify.com/v2/actor-runs?limit=20&desc=1', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!apiRes.ok) { res.status(apiRes.status).json({ error: 'Apify API error' }); return; }
+            const data = await apiRes.json() as any;
+            res.json({ runs: data.data?.items || [] });
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    // GET /api/instances/:id/apify/store — search Apify Store
+    app.get('/api/instances/:id/apify/store', async (req, res) => {
+        try {
+            const inst = await resolveInstance(req.params.id);
+            if (!inst) { res.status(404).json({ error: 'Instance not found' }); return; }
+            const { CredentialStore } = await import('../credentials/store.js');
+            const creds = new CredentialStore(inst.cwd);
+            const token = await creds.get('APIFY_API_TOKEN') || process.env.APIFY_API_TOKEN;
+            if (!token) { res.status(400).json({ error: 'APIFY_API_TOKEN not configured' }); return; }
+
+            const q = req.query.q as string || '';
+            const apiRes = await fetch(`https://api.apify.com/v2/store?search=${encodeURIComponent(q)}&limit=20`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!apiRes.ok) { res.status(apiRes.status).json({ error: 'Apify API error' }); return; }
+            const data = await apiRes.json() as any;
+            res.json({ actors: (data.data?.items || []).map((a: any) => ({
+                id: `${a.username}/${a.name}`,
+                title: a.title,
+                description: a.description?.slice(0, 150),
+                totalRuns: a.stats?.totalRuns,
+                totalUsers: a.stats?.totalUsers,
+            }))});
+        } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+    });
+
+    // ═══════════════════════════════════════════════
     // SOCKET.IO FOR LIVE LOGS & APPROVAL RELAY
     // ═══════════════════════════════════════════════
     io.on('connection', (socket) => {

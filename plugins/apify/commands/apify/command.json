@@ -1,0 +1,52 @@
+{
+    "name": "apify",
+    "description": "Manage Apify Actors, datasets, and web scraping from the command line.",
+    "subcommands": {
+        "run": {
+            "description": "Run an Apify Actor",
+            "usage": "agent apify run <actor-id> [--input <json>] [--sync] [--timeout <secs>] [--memory <mb>]",
+            "examples": [
+                "agent apify run apify/web-scraper --input '{\"startUrls\":[{\"url\":\"https://example.com\"}]}' --sync",
+                "agent apify run apify/google-search-scraper --input '{\"queries\":\"best restaurants\"}'"
+            ]
+        },
+        "status": {
+            "description": "Check the status of an Actor run",
+            "usage": "agent apify status <run-id>",
+            "examples": [
+                "agent apify status abc123def456"
+            ]
+        },
+        "results": {
+            "description": "Get results from a completed Actor run",
+            "usage": "agent apify results <dataset-id> [--limit <n>] [--format <json|csv>]",
+            "examples": [
+                "agent apify results dataset123 --limit 100",
+                "agent apify results dataset123 --format csv"
+            ]
+        },
+        "actors": {
+            "description": "List your Apify Actors",
+            "usage": "agent apify actors [--id <actor-id>]",
+            "examples": [
+                "agent apify actors",
+                "agent apify actors --id apify/web-scraper"
+            ]
+        },
+        "store": {
+            "description": "Search the Apify Store for public Actors",
+            "usage": "agent apify store <query>",
+            "examples": [
+                "agent apify store 'google maps scraper'",
+                "agent apify store 'twitter'"
+            ]
+        },
+        "datasets": {
+            "description": "List your Apify Datasets",
+            "usage": "agent apify datasets [--id <dataset-id>]",
+            "examples": [
+                "agent apify datasets"
+            ]
+        }
+    }
+}

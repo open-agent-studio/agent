@@ -1,0 +1,12 @@
+{
+    "name": "@open-agent-studio/plugin-apify",
+    "version": "1.0.0",
+    "description": "Unified Apify plugin — run Actors, manage datasets, and orchestrate web scraping from your autonomous AI agent.",
+    "author": "Open Agent Studio",
+    "license": "MIT",
+    "homepage": "https://openagent.studio/hub/plugins/apify",
+    "skills": ["skills"],
+    "commands": ["commands"],
+    "tools": ["dist/index.js"],
+    "scripts": []
+}

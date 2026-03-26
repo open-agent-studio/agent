@@ -26,6 +26,7 @@ import DesktopPanel from './components/DesktopPanel';
 import MultimodalPanel from './components/MultimodalPanel';
 import ModelsManager from './components/ModelsManager';
 import SocialPanel from './components/SocialPanel';
+import ApifyPanel from './components/ApifyPanel';
 
 export default function App() {
   return (
@@ -187,6 +188,7 @@ const sidebarGroups = [
       { icon: Wrench, label: 'Skills', path: 'skills' },
       { icon: Package, label: 'Plugins', path: 'plugins' },
       { icon: Share2, label: 'Social Media', path: 'social' },
+      { icon: Zap, label: 'Apify', path: 'apify' },
       { icon: Code, label: 'Commands', path: 'commands' },
       { icon: FileCode, label: 'Scripts', path: 'scripts' },
     ]
@@ -274,6 +276,7 @@ function InstanceView() {
           <Route path="desktop" element={<DesktopPanel />} />
           <Route path="multimodal" element={<MultimodalPanel />} />
           <Route path="social" element={<SocialPanel />} />
+          <Route path="apify" element={<ApifyPanel instanceId={id || ''} />} />
         </Routes>
         {/* Global credential capture modal */}
         <CredentialCapture />

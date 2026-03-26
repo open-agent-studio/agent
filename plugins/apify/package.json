@@ -1,0 +1,40 @@
+{
+    "name": "@open-agent-studio/plugin-apify",
+    "version": "1.0.0",
+    "description": "Unified Apify plugin for Open Agent Studio — run Actors, manage datasets, and orchestrate web scraping from your AI agent",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "prepublishOnly": "npm run build"
+    },
+    "files": [
+        "dist",
+        "plugin.json",
+        "skills",
+        "commands",
+        "README.md"
+    ],
+    "keywords": [
+        "agent",
+        "apify",
+        "web-scraping",
+        "automation",
+        "actors",
+        "datasets",
+        "open-agent-studio"
+    ],
+    "author": "Open Agent Studio",
+    "license": "MIT",
+    "dependencies": {
+        "zod": "^3.22.0"
+    },
+    "peerDependencies": {
+        "@open-agent-studio/agent": ">=0.12.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.3.0",
+        "@types/node": "^22.0.0"
+    }
+}
